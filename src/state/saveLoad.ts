@@ -12,7 +12,11 @@ export function savePlayer(grappler: Grappler): void {
 
 export function loadPlayer(): Grappler | null {
   const data = localStorage.getItem(PLAYER_KEY);
-  return data ? JSON.parse(data) : null;
+  if (!data) return null;
+  const player = JSON.parse(data) as Grappler;
+  // Backward compat: ensure learnedMoves exists
+  if (!player.learnedMoves) player.learnedMoves = [...player.moves];
+  return player;
 }
 
 // ── Opponent ──

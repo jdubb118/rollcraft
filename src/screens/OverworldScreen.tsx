@@ -5,9 +5,10 @@ import { STARTER_GYM, PLAYER_SPAWN, STARTER_GYM_NPCS } from '../overworld/maps/s
 import { createOverworldState, updateOverworld, getFacingNPC } from '../overworld/OverworldEngine';
 import { renderOverworld } from '../overworld/OverworldRenderer';
 import type { OverworldState, Direction, MenuOption, NPCState } from '../overworld/overworldTypes';
-import { loadPlayer, saveOpponent } from '../state/saveLoad';
+import { loadPlayer, savePlayer, saveOpponent, loadProgression, spendMoney } from '../state/saveLoad';
 import type { Grappler, Belt } from '../engine/types';
-import { BELT_XP_THRESHOLDS } from '../engine/types';
+import { BELT_XP_THRESHOLDS, BELT_MOVE_SLOTS } from '../engine/types';
+import { getMove } from '../data/moves';
 import { rollIVs } from '../engine/random';
 import { getLevel } from '../battle/stats';
 
@@ -30,6 +31,7 @@ function npcToGrappler(npc: NPCState): Grappler {
     ivs: rollIVs(),
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: npc.def.moves,
+    learnedMoves: [...npc.def.moves],
   };
 }
 
@@ -214,11 +216,71 @@ export default function OverworldScreen() {
       saveOpponent(opponent);
       navigate('/battle');
     } else if (action === 'learn') {
-      setDialogueText(npc.def.dialogue.teach || 'I can teach you...');
-      setMenuOptions(null);
-      menuOptionsRef.current = null;
+      // Show teachable moves as menu options
+      const teachable = npc.def.teachableMoves || [];
+      const cost = npc.def.teachCost || 100;
+      const prog = loadProgression();
+      const alreadyLearned = player?.learnedMoves || [];
+
+      const moveOptions: MenuOption[] = teachable.map(moveId => {
+        const move = getMove(moveId);
+        const already = alreadyLearned.includes(moveId);
+        const cantAfford = prog.money < cost;
+        const label = move
+          ? `${move.name} (${move.category.toUpperCase()}) — ${cost}$${already ? ' ✓ LEARNED' : ''}`
+          : moveId;
+        return {
+          label,
+          action: `learn-move:${moveId}`,
+          disabled: already || cantAfford,
+        };
+      });
+
+      setDialogueText(`${npc.def.dialogue.teach || 'I can teach you...'}\n\nYou have ${prog.money} Mat Bucks.`);
+      setMenuOptions(moveOptions);
+      menuOptionsRef.current = moveOptions;
+      setMenuIndex(0);
+      menuIndexRef.current = 0;
     } else if (action === 'promote') {
       navigate('/promotion');
+    } else if (action.startsWith('learn-move:')) {
+      const moveId = action.replace('learn-move:', '');
+      const move = getMove(moveId);
+      const cost = npc.def.teachCost || 100;
+
+      if (!player || !move) return;
+
+      // Pay for the move
+      const paid = spendMoney(cost);
+      if (!paid) {
+        setDialogueText("You don't have enough Mat Bucks.");
+        setMenuOptions(null);
+        menuOptionsRef.current = null;
+        return;
+      }
+
+      // Add to learned pool
+      if (!player.learnedMoves) player.learnedMoves = [...player.moves];
+      if (!player.learnedMoves.includes(moveId)) {
+        player.learnedMoves.push(moveId);
+      }
+
+      // Auto-equip if there's an open slot
+      const maxSlots = BELT_MOVE_SLOTS[player.belt];
+      if (player.moves.length < maxSlots && !player.moves.includes(moveId)) {
+        player.moves.push(moveId);
+      }
+
+      savePlayer(player);
+      setPlayer({ ...player });
+
+      // Show unlock message
+      setDialogueText(
+        `NEW MOVE LEARNED!\n\n${move.name.toUpperCase()}\n${move.category.toUpperCase()} | PWR:${move.power} ACC:${move.accuracy} STA:${move.staminaCost}\n\n"${move.description}"\n\n-${cost} Mat Bucks`
+        + (player.moves.includes(moveId) ? '\n\nMove equipped!' : `\n\nMove added to your pool. Manage moves from MENU.`)
+      );
+      setMenuOptions(null);
+      menuOptionsRef.current = null;
     } else if (action === 'exam') {
       setDialogueText("You need more mat time before your next belt. Keep training.");
       setMenuOptions(null);

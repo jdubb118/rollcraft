@@ -24,6 +24,7 @@ function createPlayerGrappler(path: StarterPath, name: string, giColor: string, 
     ivs: rollIVs(),
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: path.moves,
+    learnedMoves: [...path.moves],
     giColor,
     gymName,
     coachName,
@@ -43,6 +44,7 @@ function createRandomOpponent(): Grappler {
     ivs: rollIVs(),
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: arch.startingMoves,
+    learnedMoves: [...arch.startingMoves],
   };
 }
 

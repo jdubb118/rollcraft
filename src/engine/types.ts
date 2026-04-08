@@ -89,7 +89,8 @@ export interface Grappler {
   baseStats: BaseStats;
   ivs: IVs;
   evs: EVs;
-  moves: string[]; // move IDs
+  moves: string[];         // equipped move IDs (limited by belt slots)
+  learnedMoves: string[];  // all moves ever learned (full pool)
   giColor?: string;
   gymName?: string;
   coachName?: string;
