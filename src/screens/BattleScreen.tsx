@@ -245,7 +245,17 @@ export default function BattleScreen() {
                state.winMethod === 'advantages' ? 'by ADVANTAGES' : ''}
             </div>
             <button
-              onClick={() => navigate('/results')}
+              onClick={() => {
+                const isOnboarding = localStorage.getItem('rollcraft-onboarding-battle');
+                if (isOnboarding) {
+                  localStorage.removeItem('rollcraft-onboarding-battle');
+                  // Go back to create screen for rival aftermath
+                  localStorage.setItem('rollcraft-show-aftermath', 'true');
+                  navigate('/create');
+                } else {
+                  navigate('/results');
+                }
+              }}
               style={{
                 marginTop: 12, padding: '10px 24px', background: '#1a1a2e',
                 color: '#ffd700', fontSize: 'var(--fs-sm)', border: '2px solid #ffd700',
