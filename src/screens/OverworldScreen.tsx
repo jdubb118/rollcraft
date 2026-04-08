@@ -246,7 +246,7 @@ export default function OverworldScreen() {
     state.interactingNPC = npc.def.id;
     setDialogueNPC(npc);
 
-    const greeting = npc.def.role === 'professor' && player?.coachName
+    let greeting = npc.def.role === 'professor' && player?.coachName
       ? npc.def.dialogue.greeting.replace('Prof. Helio', player.coachName)
       : npc.def.dialogue.greeting;
 
@@ -262,6 +262,8 @@ export default function OverworldScreen() {
       const nextBelt = beltIdx < BELTS.length - 1 ? BELTS[beltIdx + 1] : null;
       const canPromote = nextBelt && player.xp >= BELT_XP_THRESHOLDS[nextBelt];
       if (canPromote) {
+        const coachName = player.coachName || 'Coach';
+        greeting = `"${player.name}, I've been watching your progress. You've put in the work.\n\nI'm holding a grading this week. I think you're ready for your ${nextBelt} belt.\n\nStep on the mat — let's make it official."\n\n— ${coachName}`;
         options.push({ label: `PROMOTE TO ${nextBelt!.toUpperCase()}`, action: 'promote' });
       } else if (nextBelt) {
         options.push({ label: 'BELT PROMOTION', action: 'exam', disabled: true });

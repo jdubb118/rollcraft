@@ -290,15 +290,23 @@ function executeMove(
     return;
   }
 
-  // Calculate damage (stamina drain — not HP knockout)
+  // Calculate damage — mostly stamina drain, minimal HP damage
+  // In BJJ, takedowns/passes score points and tire your opponent, they don't "hurt" them
+  // Only sustained pressure from dominant positions drains meaningful HP
   const chained2 = isChained(attacker.lastMoveId, move);
   const { damage, isCrit } = calculateDamage(attacker, defender, move, state.position, attackerRole, chained2);
   if (damage > 0) {
-    // Damage = stamina drain on defender (pressure, grinding, control)
-    const staminaDrain = Math.floor(damage * 0.4);
+    // Stamina drain = main effect (pressure, grinding)
+    const staminaDrain = Math.floor(damage * 0.5);
     deductStamina(defender, staminaDrain);
-    // Also reduce HP (representing accumulated damage/exhaustion)
-    defender.currentHp = Math.max(0, defender.currentHp - damage);
+
+    // HP damage is much smaller — only accumulates over many turns
+    // Takedowns/sweeps/passes = position moves, not damage moves
+    const hpDamage = move.category === 'submission'
+      ? damage                       // subs deal full HP damage
+      : Math.floor(damage * 0.15);   // everything else is mostly positional
+    defender.currentHp = Math.max(0, defender.currentHp - hpDamage);
+
     const critText = isCrit ? ' CRITICAL!' : '';
     state.log.push(`${move.name} connects!${critText}`);
     const effText = getEffectivenessText(defender, move);

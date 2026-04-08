@@ -27,7 +27,9 @@ function calcStat(base: number, iv: number, ev: number, level: number): number {
 }
 
 function calcHp(base: number, iv: number, ev: number, level: number): number {
-  return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10);
+  // Boosted HP formula — BJJ matches should rarely end by ref stoppage
+  // Even level 1 gets a substantial pool (~80+ HP)
+  return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10) + 60;
 }
 
 export function computeStats(grappler: Grappler): Stats {
