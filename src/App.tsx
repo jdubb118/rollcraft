@@ -4,6 +4,8 @@ import CreateScreen from './screens/CreateScreen'
 import BattleScreen from './screens/BattleScreen'
 import ResultScreen from './screens/ResultScreen'
 import OverworldScreen from './screens/OverworldScreen'
+import StatsScreen from './screens/StatsScreen'
+import PromotionScreen from './screens/PromotionScreen'
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
       <Route path="/overworld" element={<OverworldScreen />} />
       <Route path="/battle" element={<BattleScreen />} />
       <Route path="/results" element={<ResultScreen />} />
+      <Route path="/stats" element={<StatsScreen />} />
+      <Route path="/promotion" element={<PromotionScreen />} />
     </Routes>
   )
 }

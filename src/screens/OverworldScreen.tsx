@@ -6,8 +6,12 @@ import { createOverworldState, updateOverworld, getFacingNPC } from '../overworl
 import { renderOverworld } from '../overworld/OverworldRenderer';
 import type { OverworldState, Direction, MenuOption, NPCState } from '../overworld/overworldTypes';
 import { loadPlayer, saveOpponent } from '../state/saveLoad';
-import type { Grappler } from '../engine/types';
+import type { Grappler, Belt } from '../engine/types';
+import { BELT_XP_THRESHOLDS } from '../engine/types';
 import { rollIVs } from '../engine/random';
+import { getLevel } from '../battle/stats';
+
+const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 import DPad from '../components/DPad';
 import DialogueBox from '../components/DialogueBox';
 
@@ -124,7 +128,11 @@ export default function OverworldScreen() {
 
     state.interactingNPC = npc.def.id;
     setDialogueNPC(npc);
-    setDialogueText(npc.def.dialogue.greeting);
+    // Use coach name for professor NPC
+    const greeting = npc.def.role === 'professor' && player?.coachName
+      ? npc.def.dialogue.greeting.replace('Prof. Helio', player.coachName)
+      : npc.def.dialogue.greeting;
+    setDialogueText(greeting);
 
     // Build menu based on role
     const options: MenuOption[] = [];
@@ -134,8 +142,15 @@ export default function OverworldScreen() {
     if (npc.def.role === 'instructor' && npc.def.teachableMoves) {
       options.push({ label: 'LEARN A MOVE', action: 'learn' });
     }
-    if (npc.def.role === 'professor') {
-      options.push({ label: 'BELT EXAM', action: 'exam' });
+    if (npc.def.role === 'professor' && player) {
+      const beltIdx = BELTS.indexOf(player.belt);
+      const nextBelt = beltIdx < BELTS.length - 1 ? BELTS[beltIdx + 1] : null;
+      const canPromote = nextBelt && player.xp >= BELT_XP_THRESHOLDS[nextBelt];
+      if (canPromote) {
+        options.push({ label: `PROMOTE TO ${nextBelt!.toUpperCase()}`, action: 'promote' });
+      } else if (nextBelt) {
+        options.push({ label: 'BELT PROMOTION', action: 'exam', disabled: true });
+      }
     }
     setMenuOptions(options);
   }, []);
@@ -152,8 +167,10 @@ export default function OverworldScreen() {
     } else if (action === 'learn') {
       setDialogueText(dialogueNPC.def.dialogue.teach || 'I can teach you...');
       setMenuOptions(null); // TODO: show learnable moves list
+    } else if (action === 'promote') {
+      navigate('/promotion');
     } else if (action === 'exam') {
-      setDialogueText(dialogueNPC.def.dialogue.promotion || 'Not yet ready.');
+      setDialogueText("You need more mat time before your next belt. Keep training.");
       setMenuOptions(null);
     }
   }, [dialogueNPC, navigate]);
@@ -184,8 +201,18 @@ export default function OverworldScreen() {
           {player.name.toUpperCase()}
         </span>
         <span style={{ fontSize: '0.35rem', color: '#888' }}>
-          {player.belt.toUpperCase()} BELT | {player.xp} XP
+          Lv{getLevel(player)} | {player.xp} XP
         </span>
+        <button
+          onClick={() => navigate('/stats')}
+          style={{
+            padding: '4px 8px', background: '#1a1a2e', color: '#ffd700',
+            fontSize: '0.35rem', border: '1px solid #ffd700',
+            fontFamily: "'Press Start 2P', monospace",
+          }}
+        >
+          MENU
+        </button>
       </div>
 
       {/* Canvas */}

@@ -11,9 +11,9 @@ function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-type Phase = 'name' | 'gi' | 'intro' | 'choice' | 'narrative' | 'ready';
+type Phase = 'name' | 'gym' | 'gi' | 'intro' | 'choice' | 'narrative' | 'ready';
 
-function createPlayerGrappler(path: StarterPath, name: string, giColor: string): Grappler {
+function createPlayerGrappler(path: StarterPath, name: string, giColor: string, gymName: string, coachName: string): Grappler {
   return {
     id: makeId(),
     name,
@@ -25,6 +25,8 @@ function createPlayerGrappler(path: StarterPath, name: string, giColor: string):
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: path.moves,
     giColor,
+    gymName,
+    coachName,
   };
 }
 
@@ -47,14 +49,17 @@ function createRandomOpponent(): Grappler {
 export default function CreateScreen() {
   const [phase, setPhase] = useState<Phase>('name');
   const [name, setName] = useState('');
+  const [gymName, setGymName] = useState('');
+  const [coachName, setCoachName] = useState('');
   const [giColor, setGiColor] = useState<GiColor>('white');
   const [selectedPath, setSelectedPath] = useState<number | null>(null);
   const [narrativeLine, setNarrativeLine] = useState(0);
   const [introLine, setIntroLine] = useState(0);
   const navigate = useNavigate();
 
+  const academyName = gymName.trim() || 'the academy';
   const introText = [
-    "You push open the door to the academy.",
+    `You push open the door to ${academyName}.`,
     "The mats are warm. Music is playing.",
     "Training is already underway...",
     "You see three groups drilling:",
@@ -85,6 +90,10 @@ export default function CreateScreen() {
 
   const handleNameSubmit = () => {
     if (name.trim().length === 0) return;
+    setPhase('gym');
+  };
+
+  const handleGymSubmit = () => {
     setPhase('gi');
   };
 
@@ -103,7 +112,7 @@ export default function CreateScreen() {
     if (selectedPath === null) return;
     const path = STARTER_PATHS[selectedPath];
     const giHex = GI_COLORS[giColor].primary;
-    const player = createPlayerGrappler(path, name.trim(), giHex);
+    const player = createPlayerGrappler(path, name.trim(), giHex, gymName.trim(), coachName.trim());
     const opponent = createRandomOpponent();
     savePlayer(player);
     saveOpponent(opponent);
@@ -165,6 +174,58 @@ export default function CreateScreen() {
           >
             CONTINUE
           </button>
+        </>
+      )}
+
+      {/* ═══ GYM + COACH PHASE ═══ */}
+      {phase === 'gym' && (
+        <>
+          <div style={{ fontSize: '0.5rem', color: '#ffd700', textAlign: 'center', lineHeight: 2 }}>
+            YOUR HOME GYM
+          </div>
+          <input
+            type="text"
+            value={gymName}
+            onChange={e => setGymName(e.target.value)}
+            placeholder="GYM NAME"
+            maxLength={20}
+            autoFocus
+            style={{
+              width: '100%', maxWidth: 280, padding: '10px 16px', background: '#111',
+              border: '2px solid #333', color: '#fff',
+              fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem',
+              textAlign: 'center',
+            }}
+          />
+          <div style={{ fontSize: '0.5rem', color: '#ffd700', textAlign: 'center', lineHeight: 2, marginTop: 8 }}>
+            YOUR COACH
+          </div>
+          <input
+            type="text"
+            value={coachName}
+            onChange={e => setCoachName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleGymSubmit()}
+            placeholder="COACH NAME"
+            maxLength={16}
+            style={{
+              width: '100%', maxWidth: 280, padding: '10px 16px', background: '#111',
+              border: '2px solid #333', color: '#fff',
+              fontFamily: "'Press Start 2P', monospace", fontSize: '0.45rem',
+              textAlign: 'center',
+            }}
+          />
+          <button
+            onClick={handleGymSubmit}
+            style={{
+              marginTop: 8, padding: '12px 40px', background: '#ffd700',
+              color: '#000', fontSize: '0.55rem', minWidth: 200,
+            }}
+          >
+            CONTINUE
+          </button>
+          <div style={{ fontSize: '0.28rem', color: '#555', textAlign: 'center', marginTop: 4 }}>
+            (optional — leave blank for defaults)
+          </div>
         </>
       )}
 

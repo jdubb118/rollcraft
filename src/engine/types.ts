@@ -121,6 +121,8 @@ export interface Grappler {
   evs: EVs;
   moves: string[]; // move IDs
   giColor?: string; // player gi color (hex)
+  gymName?: string; // home gym name
+  coachName?: string; // coach name
 }
 
 // ── Battle-time grappler ──
