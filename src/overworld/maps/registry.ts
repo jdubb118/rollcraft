@@ -32,7 +32,7 @@ export const REGION_MAPS: Record<string, RegionMap> = {
       { col: 9, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
       { col: 10, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
     ],
-    dropInFee: 50,
+    dropInFee: 20,
     matColor: '#0a4a4a', // teal-tinted mats
   },
 };

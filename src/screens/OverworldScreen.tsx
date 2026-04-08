@@ -269,7 +269,7 @@ export default function OverworldScreen() {
       const statKeys: StatKey[] = ['str', 'tec', 'tgh', 'flx', 'spd', 'end'];
       const statLabels: Record<StatKey, string> = { str: 'STR', tec: 'TEC', tgh: 'TGH', flx: 'FLX', spd: 'SPD', end: 'END' };
       const trainOptions: MenuOption[] = statKeys.map(stat => ({
-        label: `${statLabels[stat]} +4 EVs (${player.evs[stat]}/252) — $${currentCost}`,
+        label: `${statLabels[stat]} +4 (${player.evs[stat]}/252) — $${currentCost}`,
         action: `train-stat:${stat}`,
         disabled: player.evs[stat] >= 252,
       }));
@@ -294,7 +294,7 @@ export default function OverworldScreen() {
       setPlayer({ ...player });
 
       const statLabels: Record<StatKey, string> = { str: 'STR', tec: 'TEC', tgh: 'TGH', flx: 'FLX', spd: 'SPD', end: 'END' };
-      showText(`TRAINING COMPLETE!\n\n${statLabels[stat]} +4 EVs (now ${player.evs[stat]}/252)\n\n-$${currentCost}`);
+      showText(`TRAINING COMPLETE!\n\n${statLabels[stat]} +4 (now ${player.evs[stat]}/252)\n\n-$${currentCost}`);
 
     } else if (action === 'exam') {
       showText("You need more mat time before your next belt. Keep training.");

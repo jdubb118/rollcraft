@@ -86,7 +86,7 @@ export const SCRAMBLE_VALLEY_NPCS: NPCDef[] = [
   {
     id: 'sv-jade', name: 'Jade', role: 'training-partner',
     style: 'guard-player', belt: 'white',
-    moves: ['pull-guard', 'triangle', 'armbar-guard', 'hip-escape'],
+    moves: ['pull-guard', 'triangle', 'armbar-guard', 'shrimp-escape'],
     dialogue: {
       greeting: "I came here from Coral Bay to work on my inversions.",
       challenge: "Ready when you are.",

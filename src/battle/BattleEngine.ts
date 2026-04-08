@@ -188,6 +188,24 @@ function executeMove(
     req.position === state.position && (req.role === attackerRole || (req.role === 'neutral' && attackerRole === 'neutral'))
   );
   if (!posMatch) {
+    // Position changed — try to auto-pick a legal move instead of just stalling
+    const legalMoves = getLegalMoves(state, attackerIs).filter(m => m.id !== '__stall__');
+    if (legalMoves.length > 0) {
+      // Pick the best available move (highest power escape/transition)
+      const best = legalMoves.sort((a, b) => {
+        // Prioritize escapes when on bottom
+        if (attackerRole === 'bottom') {
+          if (a.category === 'escape' && b.category !== 'escape') return -1;
+          if (b.category === 'escape' && a.category !== 'escape') return 1;
+        }
+        return b.power - a.power;
+      })[0];
+      state.log.push(`${attackerName}'s ${move.name} is no longer valid — adapts with ${best.name}!`);
+      // Recursively execute the adapted move
+      executeMove(state, attacker, defender, best, attackerIs);
+      return;
+    }
+    // No legal moves — stall
     state.log.push(`${attackerName}'s ${move.name} is no longer valid — forced to stall!`);
     attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + 10);
     attacker.lastMoveId = null;

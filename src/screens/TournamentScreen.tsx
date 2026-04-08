@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { loadPlayer, saveOpponent, loadProgression, spendMoney, addMoney, saveBattleResult, loadBattleResult, updateProgression } from '../state/saveLoad';
 import { getTournament, generateBracket } from '../data/tournaments';
 import { STYLE_NAMES, STYLE_COLORS } from '../engine/constants';
@@ -30,7 +30,8 @@ export default function TournamentScreen() {
   const [placement, setPlacement] = useState<'gold' | 'silver' | 'bronze' | 'out'>('out');
 
   // Get tournament ID from URL
-  const tourneyId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('id') || '';
+  const [searchParams] = useSearchParams();
+  const tourneyId = searchParams.get('id') || '';
   const tournament = getTournament(tourneyId);
 
   // Restore tournament state from localStorage (returning from battle)
