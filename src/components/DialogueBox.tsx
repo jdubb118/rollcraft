@@ -4,11 +4,12 @@ interface DialogueBoxProps {
   speakerName: string;
   text: string;
   menuOptions?: MenuOption[] | null;
+  selectedIndex?: number;
   onMenuSelect: (action: string) => void;
   onDismiss: () => void;
 }
 
-export default function DialogueBox({ speakerName, text, menuOptions, onMenuSelect, onDismiss }: DialogueBoxProps) {
+export default function DialogueBox({ speakerName, text, menuOptions, selectedIndex = 0, onMenuSelect, onDismiss }: DialogueBoxProps) {
   return (
     <div style={{
       position: 'fixed', bottom: 160, left: 8, right: 8,
@@ -34,32 +35,38 @@ export default function DialogueBox({ speakerName, text, menuOptions, onMenuSele
       {/* Menu options */}
       {menuOptions && menuOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-          {menuOptions.map(opt => (
-            <button
-              key={opt.action}
-              onClick={() => onMenuSelect(opt.action)}
-              disabled={opt.disabled}
-              style={{
-                padding: '6px 10px', background: opt.disabled ? '#111' : '#1a1a2e',
-                border: `1px solid ${opt.disabled ? '#333' : '#ffd700'}`,
-                color: opt.disabled ? '#555' : '#ffd700',
-                fontSize: '0.38rem', textAlign: 'left',
-                fontFamily: "'Press Start 2P', monospace",
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
+          {menuOptions.map((opt, i) => {
+            const isSelected = i === selectedIndex;
+            return (
+              <button
+                key={opt.action}
+                onClick={() => onMenuSelect(opt.action)}
+                disabled={opt.disabled}
+                style={{
+                  padding: '6px 10px',
+                  background: opt.disabled ? '#111' : isSelected ? '#2a2a4e' : '#1a1a2e',
+                  border: `2px solid ${opt.disabled ? '#333' : isSelected ? '#fff' : '#ffd700'}`,
+                  color: opt.disabled ? '#555' : '#ffd700',
+                  fontSize: '0.38rem', textAlign: 'left',
+                  fontFamily: "'Press Start 2P', monospace",
+                }}
+              >
+                {isSelected ? '► ' : '  '}{opt.label}
+              </button>
+            );
+          })}
           <button
             onClick={onDismiss}
             style={{
-              padding: '6px 10px', background: '#111',
-              border: '1px solid #444', color: '#888',
+              padding: '6px 10px',
+              background: selectedIndex === menuOptions.length ? '#1a1a2e' : '#111',
+              border: `2px solid ${selectedIndex === menuOptions.length ? '#fff' : '#444'}`,
+              color: selectedIndex === menuOptions.length ? '#ccc' : '#888',
               fontSize: '0.35rem', textAlign: 'left',
               fontFamily: "'Press Start 2P', monospace",
             }}
           >
-            CANCEL
+            {selectedIndex === menuOptions.length ? '► ' : '  '}CANCEL
           </button>
         </div>
       )}

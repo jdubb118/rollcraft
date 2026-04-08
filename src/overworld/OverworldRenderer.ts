@@ -16,6 +16,7 @@ export function renderOverworld(
   tileMap: number[][],
   playerGiColor: string | undefined,
   playerBelt: Belt,
+  coachName?: string,
 ) {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -116,17 +117,20 @@ export function renderOverworld(
 
     // Always show name + belt above NPC
     ctx.textAlign = 'center';
-    ctx.font = '4px "Press Start 2P", monospace';
+    ctx.font = '6px "Press Start 2P", monospace';
     const beltColor = BELT_LABEL_COLORS[npc.def.belt] || '#888';
+
+    // Display name — use coach name for professor
+    const displayName = (npc.def.role === 'professor' && coachName)
+      ? coachName : npc.def.name;
 
     // Belt indicator dot
     ctx.fillStyle = beltColor;
-    ctx.fillRect(nx - 2, ny - 10, 4, 4);
+    ctx.fillRect(nx - 3, ny - 14, 6, 6);
 
-    // Name (short)
+    // Name
     ctx.fillStyle = '#ccc';
-    ctx.font = '4px "Press Start 2P", monospace';
-    ctx.fillText(npc.def.name.substring(0, 8), nx, ny - 12);
+    ctx.fillText(displayName.substring(0, 10), nx, ny - 16);
 
     // Role icon for training partners
     if (npc.def.role === 'training-partner') {

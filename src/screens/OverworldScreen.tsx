@@ -41,6 +41,9 @@ export default function OverworldScreen() {
   const [dialogueNPC, setDialogueNPC] = useState<NPCState | null>(null);
   const [dialogueText, setDialogueText] = useState<string>('');
   const [menuOptions, setMenuOptions] = useState<MenuOption[] | null>(null);
+  const [menuIndex, setMenuIndex] = useState(0);
+  const menuIndexRef = useRef(0);
+  const menuOptionsRef = useRef<MenuOption[] | null>(null);
   const navigate = useNavigate();
 
   // Load player and init overworld
@@ -71,7 +74,7 @@ export default function OverworldScreen() {
 
       const ctx = canvasRef.current!.getContext('2d')!;
       ctx.imageSmoothingEnabled = false;
-      renderOverworld(ctx, state, STARTER_GYM, player.giColor, player.belt);
+      renderOverworld(ctx, state, STARTER_GYM, player.giColor, player.belt, player.coachName);
 
       rafId = requestAnimationFrame(frame);
     };
@@ -89,8 +92,24 @@ export default function OverworldScreen() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       const dir = keyMap[e.key];
-      if (dir) inputRef.current[dir] = true;
-      if (e.key === 'Enter' || e.key === ' ') handleAction();
+      if (dir) {
+        // If menu is open, up/down navigates menu
+        if (stateRef.current?.interactingNPC && (dir === 'up' || dir === 'down')) {
+          setMenuIndex(prev => {
+            // +1 for CANCEL option
+            const total = (menuOptionsRef.current?.length || 0) + 1;
+            const next = dir === 'up' ? (prev - 1 + total) % total : (prev + 1) % total;
+            menuIndexRef.current = next;
+            return next;
+          });
+          return;
+        }
+        inputRef.current[dir] = true;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleAction();
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const dir = keyMap[e.key];
@@ -113,12 +132,30 @@ export default function OverworldScreen() {
     const state = stateRef.current;
     if (!state) return;
 
-    // If already in dialogue, dismiss it
+    // If menu is open, select the highlighted option
+    if (state.interactingNPC && menuOptionsRef.current && menuOptionsRef.current.length > 0) {
+      const idx = menuIndexRef.current;
+      const opts = menuOptionsRef.current;
+      if (idx < opts.length) {
+        // Select a menu option
+        const opt = opts[idx];
+        if (!opt.disabled) {
+          handleMenuSelect(opt.action);
+        }
+      } else {
+        // CANCEL selected
+        handleDismiss();
+      }
+      return;
+    }
+
+    // If in dialogue with no menu, dismiss
     if (state.interactingNPC) {
       state.interactingNPC = null;
       setDialogueNPC(null);
       setDialogueText('');
       setMenuOptions(null);
+      menuOptionsRef.current = null;
       return;
     }
 
@@ -153,6 +190,9 @@ export default function OverworldScreen() {
       }
     }
     setMenuOptions(options);
+    menuOptionsRef.current = options;
+    setMenuIndex(0);
+    menuIndexRef.current = 0;
   }, []);
 
   // Handle menu selection
@@ -183,6 +223,9 @@ export default function OverworldScreen() {
     setDialogueNPC(null);
     setDialogueText('');
     setMenuOptions(null);
+    menuOptionsRef.current = null;
+    setMenuIndex(0);
+    menuIndexRef.current = 0;
   }, []);
 
   if (!player) return <div style={{ color: '#fff', padding: 20 }}>Loading...</div>;
@@ -237,8 +280,9 @@ export default function OverworldScreen() {
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
           style={{
-            width: '100%', maxWidth: 480, height: 'auto',
+            width: '100%', height: '100%',
             imageRendering: 'pixelated',
+            objectFit: 'contain',
           }}
         />
       </div>
@@ -246,9 +290,10 @@ export default function OverworldScreen() {
       {/* Dialogue box */}
       {dialogueNPC && (
         <DialogueBox
-          speakerName={dialogueNPC.def.name}
+          speakerName={dialogueNPC.def.name === 'Prof. Helio' && player?.coachName ? player.coachName : dialogueNPC.def.name}
           text={dialogueText}
           menuOptions={menuOptions}
+          selectedIndex={menuIndex}
           onMenuSelect={handleMenuSelect}
           onDismiss={handleDismiss}
         />
