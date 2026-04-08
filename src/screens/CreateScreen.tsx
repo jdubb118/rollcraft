@@ -107,7 +107,7 @@ export default function CreateScreen() {
     const opponent = createRandomOpponent();
     savePlayer(player);
     saveOpponent(opponent);
-    navigate('/battle');
+    navigate('/overworld');
   };
 
   // Skip ahead on tap during intro/narrative

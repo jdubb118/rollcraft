@@ -49,7 +49,7 @@ export default function TitleScreen() {
         </button>
         {hasSave && (
           <button
-            onClick={() => navigate('/battle')}
+            onClick={() => navigate('/overworld')}
             style={{
               padding: '14px 40px', background: '#1a1a2e', color: '#3498db',
               fontSize: '0.65rem', border: '2px solid #3498db',

@@ -1,36 +1,14 @@
 import { useNavigate } from 'react-router-dom';
-import { loadBattleResult, loadPlayer, savePlayer, saveOpponent } from '../state/saveLoad';
+import { loadBattleResult, loadPlayer, savePlayer } from '../state/saveLoad';
 import { STYLE_NAMES } from '../engine/constants';
 import { BELT_XP_THRESHOLDS } from '../engine/types';
-import type { Belt, Grappler } from '../engine/types';
-import { ARCHETYPES } from '../data/archetypes';
-import { rollIVs } from '../engine/random';
+import type { Belt } from '../engine/types';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 
 function getNextBelt(belt: Belt): Belt | null {
   const idx = BELTS.indexOf(belt);
   return idx < BELTS.length - 1 ? BELTS[idx + 1] : null;
-}
-
-function makeId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
-
-function createRandomOpponent(): Grappler {
-  const arch = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
-  const names = ['Renzo', 'Rickson', 'Marcelo', 'Keenan', 'Gordon', 'Lachlan', 'Mikey', 'Nicky', 'Craig', 'Leandro'];
-  return {
-    id: makeId(),
-    name: names[Math.floor(Math.random() * names.length)],
-    style: arch.style,
-    belt: 'white',
-    xp: 0,
-    baseStats: arch.baseStats,
-    ivs: rollIVs(),
-    evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
-    moves: arch.startingMoves,
-  };
 }
 
 export default function ResultScreen() {
@@ -58,8 +36,7 @@ export default function ResultScreen() {
       player.belt = nextBelt;
     }
     savePlayer(player);
-    saveOpponent(createRandomOpponent());
-    navigate('/battle');
+    navigate('/overworld');
   };
 
   const handleMenu = () => {
@@ -139,7 +116,7 @@ export default function ResultScreen() {
             fontSize: '0.55rem', border: '2px solid #22c55e',
           }}
         >
-          NEXT MATCH
+          BACK TO GYM
         </button>
         <button
           onClick={handleMenu}
