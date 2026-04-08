@@ -163,16 +163,6 @@ export default function BattleScreen() {
         </div>
       </div>
 
-      {/* Scout panel overlay */}
-      {showScout && (
-        <ScoutPanel
-          opponent={state.opponent}
-          player={state.player}
-          isKnown={isScouted(state.opponent.grappler.name)}
-          onClose={() => setShowScout(false)}
-        />
-      )}
-
       {/* Canvas area */}
       <div style={{
         flex: '1 1 40%', display: 'flex', justifyContent: 'center', alignItems: 'center',
@@ -260,6 +250,16 @@ export default function BattleScreen() {
           </div>
         )}
       </div>
+
+      {/* Scout panel overlay — full screen over the game shell */}
+      {showScout && (
+        <ScoutPanel
+          opponent={state.opponent}
+          player={state.player}
+          isKnown={isScouted(state.opponent.grappler.name)}
+          onClose={() => setShowScout(false)}
+        />
+      )}
     </div>
   );
 }

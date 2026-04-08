@@ -114,6 +114,10 @@ export default function OverworldScreen() {
         e.preventDefault();
         dispatchRef.current('action');
       }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        dispatchRef.current('action', '__dismiss__');
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const dir = keyMap[e.key];
@@ -236,12 +240,17 @@ export default function OverworldScreen() {
         return;
       }
 
+      if (prog.money < currentCost) {
+        showText(`Training costs $${currentCost} per session.\n\nYou have $${prog.money}. Not enough. Win some matches first.`);
+        return;
+      }
+
       const statKeys: StatKey[] = ['str', 'tec', 'tgh', 'flx', 'spd', 'end'];
       const statLabels: Record<StatKey, string> = { str: 'STR', tec: 'TEC', tgh: 'TGH', flx: 'FLX', spd: 'SPD', end: 'END' };
       const trainOptions: MenuOption[] = statKeys.map(stat => ({
         label: `${statLabels[stat]} +4 EVs (${player.evs[stat]}/252) — $${currentCost}`,
         action: `train-stat:${stat}`,
-        disabled: prog.money < currentCost || player.evs[stat] >= 252,
+        disabled: player.evs[stat] >= 252,
       }));
 
       showMenu(
@@ -344,6 +353,8 @@ export default function OverworldScreen() {
           const total = (menuOptions?.length || 0) + 1;
           return (prev + 1) % total;
         });
+      } else if (extra === '__dismiss__') {
+        dismiss();
       } else {
         handleAction();
       }

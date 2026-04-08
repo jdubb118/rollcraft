@@ -119,9 +119,13 @@ export function markScouted(npcId: string): void {
   if (!prog.npcScouted) prog.npcScouted = {};
   prog.npcScouted[npcId] = true;
   saveProgression(prog);
+  // Also store directly for faster access
+  localStorage.setItem(`rollcraft-scouted-${npcId}`, 'true');
 }
 
 export function isScouted(npcId: string): boolean {
+  // Check direct key first (more reliable across save format changes)
+  if (localStorage.getItem(`rollcraft-scouted-${npcId}`) === 'true') return true;
   const prog = loadProgression();
   return prog.npcScouted?.[npcId] ?? false;
 }
