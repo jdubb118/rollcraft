@@ -835,6 +835,110 @@ export const MOVES: Move[] = [
     power: 5, accuracy: 80, staminaCost: 10, statAttack: 'tec', statDefense: 'str',
     chainPotential: ['lockdown', 'deep-half-sweep'], description: 'Frame with the arms. Systematic escape.',
   },
+  // ═══ GAP-FILLING MOVES — weak positions ═══
+
+  // ── Closed Guard Top (only had posture-up + guard-break) ──
+  {
+    id: 'can-opener', name: 'Can Opener', category: 'transition', style: 'pressure-passer',
+    posReq: [top('closed-guard')], resultPosition: 'open-guard', resultRole: 'top',
+    power: 25, accuracy: 80, staminaCost: 14, statAttack: 'str', statDefense: 'tgh',
+    chainPotential: ['knee-cut', 'smash-pass'], description: 'Dig elbows into thighs to force the guard open.',
+  },
+  {
+    id: 'standing-guard-break', name: 'Stand to Break Guard', category: 'transition', style: 'wrestler',
+    posReq: [top('closed-guard')], resultPosition: 'open-guard', resultRole: 'top',
+    power: 15, accuracy: 88, staminaCost: 12, statAttack: 'str', statDefense: 'flx',
+    chainPotential: ['toreando', 'leg-drag', 'body-lock-pass'], description: 'Stand up in their guard to break the ankle lock.',
+  },
+
+  // ── Knee-on-Belly Bottom (only had 1 escape) ──
+  {
+    id: 'kob-hip-escape', name: 'Hip Escape from KOB', category: 'escape', style: 'guard-player',
+    posReq: [bot('knee-on-belly')], resultPosition: 'half-guard', resultRole: 'bottom',
+    power: 20, accuracy: 75, staminaCost: 14, statAttack: 'spd', statDefense: 'str',
+    chainPotential: ['scissor-sweep'], description: 'Frame the knee and hip escape to recover half guard.',
+  },
+  {
+    id: 'kob-push-escape', name: 'Push Knee & Reguard', category: 'escape', style: 'controller',
+    posReq: [bot('knee-on-belly')], resultPosition: 'open-guard', resultRole: 'bottom',
+    power: 15, accuracy: 80, staminaCost: 12, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['pull-guard', 'leg-entry'], description: 'Push the knee off and recover open guard.',
+  },
+  {
+    id: 'kob-roll-escape', name: 'Roll Under to Turtle', category: 'escape', style: 'wrestler',
+    posReq: [bot('knee-on-belly')], resultPosition: 'turtle', resultRole: 'bottom',
+    power: 10, accuracy: 82, staminaCost: 10, statAttack: 'spd', statDefense: 'str',
+    chainPotential: ['turtle-standup', 'granby-roll'], description: 'Roll underneath and turtle up.',
+  },
+
+  // ── North-South Bottom (only had 1 escape) ──
+  {
+    id: 'ns-hip-escape', name: 'Hip Escape from NS', category: 'escape', style: 'guard-player',
+    posReq: [bot('north-south')], resultPosition: 'half-guard', resultRole: 'bottom',
+    power: 20, accuracy: 70, staminaCost: 16, statAttack: 'flx', statDefense: 'str',
+    chainPotential: ['shrimp-escape'], description: 'Create space with frames and recover half guard.',
+  },
+  {
+    id: 'ns-turtle-escape', name: 'Turtle from NS', category: 'escape', style: 'wrestler',
+    posReq: [bot('north-south')], resultPosition: 'turtle', resultRole: 'bottom',
+    power: 10, accuracy: 78, staminaCost: 12, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['turtle-standup', 'granby-roll'], description: 'Turn to your knees and turtle up.',
+  },
+  {
+    id: 'ns-invert', name: 'Invert to Guard', category: 'escape', style: 'berimbolo',
+    posReq: [bot('north-south')], resultPosition: 'open-guard', resultRole: 'bottom',
+    power: 15, accuracy: 65, staminaCost: 14, statAttack: 'flx', statDefense: 'str',
+    chainPotential: ['leg-entry', 'berimbolo-sweep'], description: 'Invert underneath and recover open guard.',
+  },
+
+  // ── Turtle (more options for both sides) ──
+  {
+    id: 'turtle-sit-out', name: 'Sit Out', category: 'escape', style: 'wrestler',
+    posReq: [bot('turtle')], resultPosition: 'standing', resultRole: 'neutral',
+    power: 20, accuracy: 72, staminaCost: 14, statAttack: 'spd', statDefense: 'str',
+    chainPotential: ['double-leg', 'single-leg'], description: 'Explosive sit-out to return to feet.',
+  },
+  {
+    id: 'turtle-cradle', name: 'Cradle', category: 'submission', style: 'wrestler',
+    posReq: [top('turtle')], resultPosition: null, resultRole: null,
+    power: 40, accuracy: 68, staminaCost: 18, statAttack: 'str', statDefense: 'flx',
+    chainPotential: [], description: 'Lock up the cradle. Extreme pressure.',
+  },
+  {
+    id: 'clock-choke', name: 'Clock Choke', category: 'submission', style: 'judoka',
+    posReq: [top('turtle')], resultPosition: null, resultRole: null,
+    power: 50, accuracy: 65, staminaCost: 16, statAttack: 'tec', statDefense: 'tgh',
+    chainPotential: [], description: 'Walk around to tighten the collar choke.',
+  },
+
+  // ── KOB Top (more options) ──
+  {
+    id: 'kob-armbar', name: 'Spinning Armbar from KOB', category: 'submission', style: 'sub-hunter',
+    posReq: [top('knee-on-belly')], resultPosition: null, resultRole: null,
+    power: 55, accuracy: 62, staminaCost: 18, statAttack: 'tec', statDefense: 'flx',
+    chainPotential: [], description: 'Spin to armbar from knee on belly.',
+  },
+  {
+    id: 'kob-to-mount', name: 'Step Over to Mount', category: 'transition', style: 'pressure-passer',
+    posReq: [top('knee-on-belly')], resultPosition: 'mount', resultRole: 'top',
+    power: 15, accuracy: 82, staminaCost: 8, statAttack: 'str', statDefense: 'spd',
+    chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Step over to mount.',
+  },
+
+  // ── North-South Top (more options) ──
+  {
+    id: 'ns-kimura', name: 'North-South Kimura', category: 'submission', style: 'controller',
+    posReq: [top('north-south')], resultPosition: null, resultRole: null,
+    power: 55, accuracy: 72, staminaCost: 16, statAttack: 'tec', statDefense: 'str',
+    chainPotential: [], description: 'Isolate the arm from north-south for a tight kimura.',
+  },
+  {
+    id: 'ns-to-mount', name: 'Transition to Mount', category: 'transition', style: 'pressure-passer',
+    posReq: [top('north-south')], resultPosition: 'mount', resultRole: 'top',
+    power: 10, accuracy: 85, staminaCost: 8, statAttack: 'str', statDefense: 'spd',
+    chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Slide to mount from north-south.',
+  },
+
   // ── SETUP MOVES (grips / control) ──
   {
     id: 'collar-grip', name: 'Collar Grip', category: 'setup', style: 'judoka',

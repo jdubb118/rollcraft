@@ -197,8 +197,9 @@ export default function BattleScreen() {
           ref={logRef}
           className="no-scrollbar"
           style={{
-            fontSize: 'var(--fs-xs)', padding: '4px 12px',
-            maxHeight: isOver ? 250 : 120, overflowY: 'auto', lineHeight: 1.8,
+            fontSize: 'var(--fs-sm)', padding: '4px 12px',
+            maxHeight: isOver ? 250 : 130, overflowY: 'auto', lineHeight: 1.6,
+            wordBreak: 'break-word',
             background: '#0d0d1a', borderTop: '1px solid #222', borderBottom: '1px solid #222',
           }}
         >
