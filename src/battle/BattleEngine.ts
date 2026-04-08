@@ -47,8 +47,12 @@ function computeFirstActor(state: BattleState): 'player' | 'opponent' {
   const opponentMod = opponentRole === 'top' ? posData.atbModTop
     : opponentRole === 'bottom' ? posData.atbModBottom : 1.0;
 
-  const playerATB = state.player.stats.spd * playerMod;
-  const opponentATB = state.opponent.stats.spd * opponentMod;
+  // Gassed penalty: 40% speed reduction when exhausted
+  const playerGasPenalty = state.player.isGassed ? 0.6 : 1.0;
+  const opponentGasPenalty = state.opponent.isGassed ? 0.6 : 1.0;
+
+  const playerATB = state.player.stats.spd * playerMod * playerGasPenalty;
+  const opponentATB = state.opponent.stats.spd * opponentMod * opponentGasPenalty;
 
   if (playerATB === opponentATB) return Math.random() > 0.5 ? 'player' : 'opponent';
   return playerATB >= opponentATB ? 'player' : 'opponent';
@@ -169,18 +173,21 @@ function executeMove(
       if (result.escaped) break;
     }
     // Escaped — deal partial damage
-    const damage = Math.floor(calculateDamage(attacker, defender, move, state.position, attackerRole) * 0.3);
-    if (damage > 0) defender.currentHp = Math.max(0, defender.currentHp - damage);
+    const subResult = calculateDamage(attacker, defender, move, state.position, attackerRole, chained);
+    const escapeDmg = Math.floor(subResult.damage * 0.3);
+    if (escapeDmg > 0) defender.currentHp = Math.max(0, defender.currentHp - escapeDmg);
     attacker.lastMoveId = move.id;
     checkKO(state, defender, attackerIs);
     return;
   }
 
-  // Calculate damage
-  const damage = calculateDamage(attacker, defender, move, state.position, attackerRole);
+  // Calculate damage (with crit check)
+  const chained2 = isChained(attacker.lastMoveId, move);
+  const { damage, isCrit } = calculateDamage(attacker, defender, move, state.position, attackerRole, chained2);
   if (damage > 0) {
     defender.currentHp = Math.max(0, defender.currentHp - damage);
-    state.log.push(`${move.name} deals ${damage} damage!`);
+    const critText = isCrit ? ' CRITICAL HIT!' : '';
+    state.log.push(`${move.name} deals ${damage} damage!${critText}`);
     const effText = getEffectivenessText(defender, move);
     if (effText) state.log.push(effText);
   }
