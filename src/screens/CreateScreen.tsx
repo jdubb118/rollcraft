@@ -257,19 +257,19 @@ export default function CreateScreen() {
       {phase === 'cinematic' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, maxWidth: 320 }}>
           {cinematicLines.slice(0, textLine).map((line, i) => {
-            if (line === "") return <div key={i} style={{ height: 8 }} />;
-            const isCoach = line.includes(coach) && (line.includes('"') || line.includes('"'));
+            if (line === "") return <div key={i} style={{ height: 12 }} />;
+            const isCoach = line.includes('"');
             return (
               <div key={i} style={{
                 fontSize: 'var(--fs-sm)',
-                color: isCoach ? '#ffd700' : i === textLine - 1 ? '#e0e0e0' : '#666',
+                color: isCoach ? '#ffd700' : i === textLine - 1 ? '#e0e0e0' : '#999',
                 textAlign: 'center', lineHeight: 1.8,
               }} className="fade-in">
                 {line}
               </div>
             );
           })}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#333', marginTop: 12 }} className="blink">TAP TO SKIP</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">TAP TO SKIP</div>
         </div>
       )}
 
@@ -306,7 +306,7 @@ export default function CreateScreen() {
               {line}
             </div>
           ))}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#333', marginTop: 12 }} className="blink">TAP TO SKIP</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">TAP TO SKIP</div>
         </div>
       )}
 
@@ -388,7 +388,7 @@ export default function CreateScreen() {
               </div>
             );
           })}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#333', marginTop: 12 }} className="blink">TAP TO CONTINUE</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">TAP TO CONTINUE</div>
         </div>
       )}
 
