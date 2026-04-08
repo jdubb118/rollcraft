@@ -31,9 +31,9 @@ export const SCRAMBLE_VALLEY_NPCS: NPCDef[] = [
     teachableMoves: ['berimbolo-sweep', 'seatbelt-back-take'],
     teachCost: 200,
     dialogue: {
-      greeting: "Welcome to Scramble Valley. Here, we never stop moving.",
+      greeting: "You want the Scramble Stamp? Beat me from the berimbolo position. Nobody's done it yet this month.",
       teach: "The berimbolo is not a trick. It is a philosophy.",
-      defeat: "You've earned the Scramble Stamp. Wear it well.",
+      defeat: "Well damn. Take the stamp. Come back when you want the advanced stuff.",
     },
     position: { col: 3, row: 2 }, wanders: false,
     baseStats: { hp: 60, str: 50, tec: 95, tgh: 55, flx: 95, spd: 90, end: 70 },

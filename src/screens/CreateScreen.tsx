@@ -6,12 +6,13 @@ import { rollIVs } from '../engine/random';
 import { savePlayer, saveOpponent } from '../state/saveLoad';
 import type { Grappler, Frame, Style } from '../engine/types';
 import { ARCHETYPES, ARCHETYPE_FRAMES } from '../data/archetypes';
+import { COACH_DIALOGUE, RIVAL_ENCOUNTERS, RIVAL_NAME } from '../data/storyArc';
 
 function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-type Phase = 'name' | 'gym' | 'gi' | 'intro' | 'choice' | 'narrative' | 'ready';
+type Phase = 'name' | 'gym' | 'gi' | 'coach-intro' | 'intro' | 'choice' | 'narrative' | 'ready' | 'rival-origin';
 
 const STYLE_FRAME: Record<Style, Frame> = {
   'wrestler': 'heavy', 'judoka': 'heavy', 'pressure-passer': 'heavy',
@@ -65,6 +66,8 @@ export default function CreateScreen() {
   const [selectedPath, setSelectedPath] = useState<number | null>(null);
   const [narrativeLine, setNarrativeLine] = useState(0);
   const [introLine, setIntroLine] = useState(0);
+  const [coachLine, setCoachLine] = useState(0);
+  const [rivalLine, setRivalLine] = useState(0);
   const navigate = useNavigate();
 
   const academyName = gymName.trim() || 'the academy';
@@ -74,6 +77,46 @@ export default function CreateScreen() {
     "Training is already underway...",
     "You see three groups drilling:",
   ];
+
+  // Coach intro lines
+  const coachLines = COACH_DIALOGUE.firstMeeting;
+  const coachDisplayName = coachName.trim() || 'Prof. Helio';
+
+  // Auto-advance coach intro
+  useEffect(() => {
+    if (phase !== 'coach-intro') return;
+    if (coachLine >= coachLines.length) {
+      setPhase('intro');
+      return;
+    }
+    const timer = setTimeout(() => setCoachLine(i => i + 1), 2200);
+    return () => clearTimeout(timer);
+  }, [phase, coachLine]);
+
+  // Rival origin lines
+  const rivalOrigin = RIVAL_ENCOUNTERS[0]; // first encounter
+  const rivalLines = [
+    ...rivalOrigin.dialogueBefore,
+    ...(rivalOrigin.dialogueAfter || []),
+  ];
+
+  // Auto-advance rival origin
+  useEffect(() => {
+    if (phase !== 'rival-origin') return;
+    if (rivalLine >= rivalLines.length) {
+      // Done — save player and go to overworld
+      if (selectedPath !== null) {
+        const path = STARTER_PATHS[selectedPath];
+        const giHex = GI_COLORS[giColor].primary;
+        const player = createPlayerGrappler(path, name.trim(), giHex, gymName.trim(), coachName.trim());
+        savePlayer(player);
+        navigate('/overworld');
+      }
+      return;
+    }
+    const timer = setTimeout(() => setRivalLine(i => i + 1), 2000);
+    return () => clearTimeout(timer);
+  }, [phase, rivalLine]);
 
   // Auto-advance intro text
   useEffect(() => {
@@ -109,7 +152,8 @@ export default function CreateScreen() {
 
   const handleGiSelect = (color: GiColor) => {
     setGiColor(color);
-    setPhase('intro');
+    setCoachLine(0);
+    setPhase('coach-intro');
   };
 
   const handlePathSelect = (index: number) => {
@@ -120,18 +164,17 @@ export default function CreateScreen() {
 
   const handleStart = () => {
     if (selectedPath === null) return;
-    const path = STARTER_PATHS[selectedPath];
-    const giHex = GI_COLORS[giColor].primary;
-    const player = createPlayerGrappler(path, name.trim(), giHex, gymName.trim(), coachName.trim());
-    const opponent = createRandomOpponent();
-    savePlayer(player);
-    saveOpponent(opponent);
-    navigate('/overworld');
+    // Transition to rival origin scene instead of going straight to overworld
+    setRivalLine(0);
+    setPhase('rival-origin');
   };
 
-  // Skip ahead on tap during intro/narrative
+  // Skip ahead on tap during cinematic phases
   const handleTap = () => {
-    if (phase === 'intro' && introLine < introText.length) {
+    if (phase === 'coach-intro') {
+      setCoachLine(coachLines.length);
+      setPhase('intro');
+    } else if (phase === 'intro' && introLine < introText.length) {
       setIntroLine(introText.length);
       setPhase('choice');
     } else if (phase === 'narrative' && selectedPath !== null) {
@@ -140,18 +183,87 @@ export default function CreateScreen() {
         setNarrativeLine(path.narrative.length);
         setPhase('ready');
       }
+    } else if (phase === 'rival-origin') {
+      // Skip to end — save and go
+      if (selectedPath !== null) {
+        const path = STARTER_PATHS[selectedPath];
+        const giHex = GI_COLORS[giColor].primary;
+        const player = createPlayerGrappler(path, name.trim(), giHex, gymName.trim(), coachName.trim());
+        savePlayer(player);
+        navigate('/overworld');
+      }
     }
   };
 
   return (
     <div
-      onClick={phase === 'intro' || phase === 'narrative' ? handleTap : undefined}
+      onClick={['coach-intro', 'intro', 'narrative', 'rival-origin'].includes(phase) ? handleTap : undefined}
       className="game-shell"
       style={{
         justifyContent: 'center', alignItems: 'center',
         padding: 24, gap: 20,
       }}
     >
+      {/* ═══ COACH INTRO ═══ */}
+      {phase === 'coach-intro' && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 12, maxWidth: 320,
+        }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700', marginBottom: 8 }}>
+            {coachDisplayName.toUpperCase()}
+          </div>
+          {coachLines.slice(0, coachLine).map((dl, i) => (
+            <div key={i} style={{
+              fontSize: 'var(--fs-sm)', color: '#e0e0e0',
+              textAlign: 'center', lineHeight: 1.8,
+              opacity: i === coachLine - 1 ? 1 : 0.5,
+            }} className="fade-in">
+              {dl.line.replace('Prof. Helio', coachDisplayName)}
+            </div>
+          ))}
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#444', marginTop: 16 }} className="blink">
+            TAP TO CONTINUE
+          </div>
+        </div>
+      )}
+
+      {/* ═══ RIVAL ORIGIN ═══ */}
+      {phase === 'rival-origin' && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 12, maxWidth: 320,
+        }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: '#888', marginBottom: 8 }}>
+            After your first roll...
+          </div>
+          {rivalLines.slice(0, rivalLine).map((dl, i) => {
+            const isRival = dl.speaker === 'Kenzo';
+            const isCoach = dl.speaker === 'Prof. Helio';
+            const speaker = isCoach ? coachDisplayName : dl.speaker;
+            return (
+              <div key={i} style={{
+                fontSize: 'var(--fs-sm)',
+                color: isRival ? '#ef4444' : isCoach ? '#ffd700' : '#e0e0e0',
+                textAlign: 'center', lineHeight: 1.8,
+                opacity: i === rivalLine - 1 ? 1 : 0.6,
+              }} className="fade-in">
+                <span style={{ fontSize: 'var(--fs-xs)', color: '#666' }}>{speaker}: </span>
+                {dl.line}
+              </div>
+            );
+          })}
+          {rivalLine >= rivalLines.length && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#ef4444', marginTop: 8 }}>
+              {RIVAL_NAME} storms out of the gym.
+            </div>
+          )}
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#444', marginTop: 16 }} className="blink">
+            TAP TO CONTINUE
+          </div>
+        </div>
+      )}
+
       {/* ═══ NAME PHASE ═══ */}
       {phase === 'name' && (
         <>

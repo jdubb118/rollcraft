@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { loadPlayer, savePlayer } from '../state/saveLoad';
 import type { Belt } from '../engine/types';
 import { BELT_MOVE_SLOTS } from '../engine/types';
+import { COACH_DIALOGUE } from '../data/storyArc';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 const BELT_COLORS: Record<Belt, string> = {
@@ -13,47 +14,17 @@ const BELT_GLOW: Record<Belt, string> = {
 };
 
 function getPromotionText(belt: Belt, coachName: string): string[] {
-  const coach = coachName || 'Your coach';
-  const texts: Record<Belt, string[]> = {
-    white: [],
-    blue: [
-      "The academy falls silent.",
-      `${coach} steps onto the mat.`,
-      `"You've shown dedication. You've earned this."`,
-      "The blue belt is tied around your waist.",
-      `"The journey is just beginning. Blue belt is where you learn to learn."`,
-      `"Now the real work starts."`,
-    ],
-    purple: [
-      "The room gathers around the mat.",
-      `${coach} holds the purple belt.`,
-      `"Purple belt. The belt of the teacher."`,
-      `"You don't just know techniques now — you understand why they work."`,
-      "It's wrapped around you. It feels different. Heavier.",
-      `"Go create. Your game is your own now."`,
-    ],
-    brown: [
-      "The senior students line up on the mat.",
-      `${coach}'s voice is quiet but firm.`,
-      `"Brown belt. One step from the summit."`,
-      `"Everything you know, you now know deeply."`,
-      "The belt is placed with ceremony.",
-      `"Sharpen everything. Leave no gaps."`,
-    ],
-    black: [
-      "The entire academy is on the mat.",
-      "Years of training flash through your mind.",
-      `${coach} stands before you.`,
-      `"When you started, you couldn't escape side control."`,
-      `"Now..."`,
-      `${coach} pauses.`,
-      `"Now you are the standard."`,
-      "The black belt. Tied with reverence.",
-      `"This isn't the end. It's the beginning of mastery."`,
-      `"Welcome, Professor."`,
-    ],
-  };
-  return texts[belt];
+  const coach = coachName || 'Prof. Helio';
+  const storyLines = COACH_DIALOGUE.beltPromotions[belt as keyof typeof COACH_DIALOGUE.beltPromotions];
+  if (!storyLines || storyLines.length === 0) return [];
+
+  // Build cinematic scene with story dialogue
+  const scene: string[] = ["The academy falls silent.", `${coach} steps onto the mat.`, ""];
+  for (const dl of storyLines) {
+    scene.push(dl.line.replace('Prof. Helio', coach));
+  }
+  scene.push("", `The ${belt} belt is tied around your waist.`);
+  return scene.filter(l => l !== "");
 }
 
 export default function PromotionScreen() {

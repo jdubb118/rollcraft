@@ -12,6 +12,7 @@ import { getMove } from '../data/moves';
 import { rollIVs } from '../engine/random';
 import { getLevel } from '../battle/stats';
 import { getDifficulty } from '../components/ScoutPanel';
+import { RIVAL_ENCOUNTERS, REGION_STORIES } from '../data/storyArc';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 import DPad from '../components/DPad';
@@ -54,6 +55,7 @@ export default function OverworldScreen() {
   const [menuIndex, setMenuIndex] = useState(0);
   const [currentRegionId, setCurrentRegionId] = useState('home');
   const regionRef = useRef(getRegionMap('home')!);
+  const [arrivalText, setArrivalText] = useState<string[] | null>(null);
   const navigate = useNavigate();
 
   // ── Single dispatch ref — keyboard always calls the latest version ──
@@ -70,6 +72,22 @@ export default function OverworldScreen() {
     regionRef.current = region;
     setCurrentRegionId(regionId);
     stateRef.current = createOverworldState(region.playerSpawn.col, region.playerSpawn.row, region.npcs);
+
+    // Show arrival story text for non-home regions (first visit)
+    const storyKey = `rollcraft-visited-${regionId}`;
+    const regionStory = REGION_STORIES[regionId as keyof typeof REGION_STORIES];
+    if (regionId !== 'home' && regionStory && !localStorage.getItem(storyKey)) {
+      localStorage.setItem(storyKey, 'true');
+      const lines: string[] = [regionStory.arrival];
+      // Check for rival encounter on arrival
+      const rivalEvent = RIVAL_ENCOUNTERS.find(e => e.region === regionId && e.trigger === 'on-arrival');
+      if (rivalEvent) {
+        for (const dl of rivalEvent.dialogueBefore) {
+          lines.push(`${dl.speaker}: ${dl.line}`);
+        }
+      }
+      setArrivalText(lines);
+    }
   }, [navigate]);
 
   // Game loop
@@ -448,6 +466,36 @@ export default function OverworldScreen() {
           }}
         />
       </div>
+
+      {/* Arrival story overlay */}
+      {arrivalText && (
+        <div
+          onClick={() => setArrivalText(null)}
+          style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', zIndex: 55,
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            alignItems: 'center', padding: 24, gap: 12, cursor: 'pointer',
+          }}
+        >
+          {arrivalText.map((line, i) => {
+            const isRival = line.includes('Kenzo:');
+            return (
+              <div key={i} style={{
+                fontSize: 'var(--fs-sm)',
+                color: isRival ? '#ef4444' : i === 0 ? '#ffd700' : '#ccc',
+                textAlign: 'center', lineHeight: 1.8,
+                fontStyle: i === 0 ? 'italic' : 'normal',
+              }}>
+                {line}
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#444', marginTop: 16 }} className="blink">
+            TAP TO CONTINUE
+          </div>
+        </div>
+      )}
 
       {/* Dialogue box */}
       {dialogueNPC && (
