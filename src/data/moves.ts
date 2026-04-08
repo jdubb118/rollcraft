@@ -282,6 +282,164 @@ export const MOVES: Move[] = [
     power: 0, accuracy: 72, staminaCost: 14, statAttack: 'tec', statDefense: 'spd',
     chainPotential: ['rnc'], description: 'Spin behind to take the back.',
   },
+
+  // ═══ GAP FILLERS — ensuring every position has 3+ moves ═══
+
+  // North-South (was only Kimura)
+  {
+    id: 'ns-choke', name: 'North-South Choke', category: 'submission', style: 'controller',
+    positionRequired: ['north-south'], positionResult: null,
+    power: 70, accuracy: 72, staminaCost: 18, statAttack: 'str', statDefense: 'tgh',
+    chainPotential: ['kimura'], description: 'Chest pressure choke from north-south.',
+  },
+  {
+    id: 'ns-to-side', name: 'Spin to Side Control', category: 'transition', style: 'controller',
+    positionRequired: ['north-south'], positionResult: 'side-control',
+    power: 0, accuracy: 90, staminaCost: 6, statAttack: 'spd', statDefense: 'spd',
+    chainPotential: ['americana', 'darce'], description: 'Rotate back to side control.',
+  },
+  {
+    id: 'ns-to-mount', name: 'Advance to Mount', category: 'transition', style: 'controller',
+    positionRequired: ['north-south'], positionResult: 'mount',
+    power: 0, accuracy: 75, staminaCost: 12, statAttack: 'spd', statDefense: 'spd',
+    chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Step over to mount from north-south.',
+  },
+
+  // Back-Control-Bottom (was only 1 escape)
+  {
+    id: 'hand-fight', name: 'Hand Fighting', category: 'escape', style: 'controller',
+    positionRequired: ['back-control-bottom'], positionResult: null,
+    power: 0, accuracy: 90, staminaCost: 8, statAttack: 'tec', statDefense: 'tec',
+    chainPotential: ['back-escape'], description: 'Fight the grips. Reduce next sub accuracy.',
+  },
+  {
+    id: 'back-escape-turtle', name: 'Escape to Turtle', category: 'escape', style: 'wrestler',
+    positionRequired: ['back-control-bottom'], positionResult: 'turtle-bottom',
+    power: 10, accuracy: 72, staminaCost: 14, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['turtle-standup'], description: 'Clear hooks and turtle up.',
+  },
+
+  // Turtle-Bottom (was only Standup)
+  {
+    id: 'granby-roll', name: 'Granby Roll', category: 'escape', style: 'berimbolo',
+    positionRequired: ['turtle-bottom'], positionResult: 'open-guard-bottom',
+    power: 20, accuracy: 65, staminaCost: 16, statAttack: 'flx', statDefense: 'spd',
+    chainPotential: ['leg-entry', 'scissor-sweep'], description: 'Invert and recover guard.',
+  },
+  {
+    id: 'sit-out', name: 'Sit Out', category: 'escape', style: 'wrestler',
+    positionRequired: ['turtle-bottom'], positionResult: 'standing',
+    power: 25, accuracy: 70, staminaCost: 14, statAttack: 'spd', statDefense: 'str',
+    chainPotential: ['double-leg', 'snap-down'], description: 'Explosive sit out to standing.',
+  },
+
+  // Mount-Bottom (was only 2 escapes)
+  {
+    id: 'elbow-escape', name: 'Elbow Escape', category: 'escape', style: 'guard-player',
+    positionRequired: ['mount-bottom'], positionResult: 'half-guard-bottom',
+    power: 5, accuracy: 78, staminaCost: 14, statAttack: 'flx', statDefense: 'str',
+    chainPotential: ['deep-half-sweep'], description: 'Frame and shrimp to half guard.',
+  },
+  {
+    id: 'trap-roll', name: 'Trap & Roll', category: 'escape', style: 'wrestler',
+    positionRequired: ['mount-bottom'], positionResult: 'closed-guard-bottom',
+    power: 30, accuracy: 65, staminaCost: 20, statAttack: 'str', statDefense: 'tgh',
+    chainPotential: ['armbar-guard', 'triangle'], description: 'Trap arm, bridge hard, reverse.',
+  },
+
+  // Side-Control-Bottom (was only 2 escapes)
+  {
+    id: 'underhook-escape', name: 'Underhook Escape', category: 'escape', style: 'wrestler',
+    positionRequired: ['side-control-bottom'], positionResult: 'open-guard-bottom',
+    power: 20, accuracy: 70, staminaCost: 16, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['butterfly-sweep', 'x-guard-sweep'], description: 'Fight for underhook, come to knees.',
+  },
+  {
+    id: 'guard-recovery', name: 'Guard Recovery', category: 'escape', style: 'guard-player',
+    positionRequired: ['side-control-bottom'], positionResult: 'open-guard-bottom',
+    power: 5, accuracy: 75, staminaCost: 12, statAttack: 'flx', statDefense: 'str',
+    chainPotential: ['scissor-sweep', 'leg-entry'], description: 'Frame, create space, re-guard.',
+  },
+
+  // Mount (only had submissions — need transitions)
+  {
+    id: 'mount-to-back', name: 'Take Back from Mount', category: 'transition', style: 'berimbolo',
+    positionRequired: ['mount'], positionResult: 'back-control',
+    power: 0, accuracy: 78, staminaCost: 10, statAttack: 'tec', statDefense: 'spd',
+    chainPotential: ['rnc', 'armbar-back'], description: 'Opponent turns, you take the back.',
+  },
+  {
+    id: 'gift-wrap', name: 'Gift Wrap Control', category: 'submission', style: 'controller',
+    positionRequired: ['mount'], positionResult: null,
+    power: 50, accuracy: 82, staminaCost: 12, statAttack: 'str', statDefense: 'flx',
+    chainPotential: ['mount-to-back', 'armbar-mount'], description: 'Trap the arm and control.',
+  },
+
+  // Back-Control (only had submissions — need transition)
+  {
+    id: 'back-to-mount', name: 'Transition to Mount', category: 'transition', style: 'controller',
+    positionRequired: ['back-control'], positionResult: 'mount',
+    power: 0, accuracy: 80, staminaCost: 8, statAttack: 'spd', statDefense: 'spd',
+    chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Release hooks, establish mount.',
+  },
+
+  // Closed-Guard-Top (only had 2 passes)
+  {
+    id: 'posture-up', name: 'Posture Up', category: 'transition', style: 'pressure-passer',
+    positionRequired: ['closed-guard-top'], positionResult: 'open-guard-top',
+    power: 10, accuracy: 85, staminaCost: 10, statAttack: 'str', statDefense: 'flx',
+    chainPotential: ['toreando', 'leg-drag', 'knee-cut'], description: 'Break posture and open the guard.',
+  },
+  {
+    id: 'guard-slam', name: 'Guard Break', category: 'pass', style: 'wrestler',
+    positionRequired: ['closed-guard-top'], positionResult: 'open-guard-top',
+    power: 35, accuracy: 78, staminaCost: 16, statAttack: 'str', statDefense: 'flx',
+    chainPotential: ['knee-cut', 'toreando'], description: 'Force the guard open with pressure.',
+  },
+
+  // Knee-on-Belly (need more options)
+  {
+    id: 'kob-armbar', name: 'Armbar from KOB', category: 'submission', style: 'sub-hunter',
+    positionRequired: ['knee-on-belly'], positionResult: null,
+    power: 75, accuracy: 70, staminaCost: 20, statAttack: 'tec', statDefense: 'flx',
+    chainPotential: ['americana'], description: 'Step over for armbar from knee on belly.',
+  },
+  {
+    id: 'kob-to-side', name: 'Drop to Side Control', category: 'transition', style: 'controller',
+    positionRequired: ['knee-on-belly'], positionResult: 'side-control',
+    power: 0, accuracy: 95, staminaCost: 4, statAttack: 'spd', statDefense: 'spd',
+    chainPotential: ['darce', 'americana'], description: 'Settle back to side control.',
+  },
+
+  // Leg-Entanglement (need non-submission options)
+  {
+    id: 'leg-escape-stand', name: 'Stand from Legs', category: 'escape', style: 'wrestler',
+    positionRequired: ['leg-entanglement'], positionResult: 'standing',
+    power: 10, accuracy: 70, staminaCost: 16, statAttack: 'str', statDefense: 'tec',
+    chainPotential: ['double-leg'], description: 'Disengage legs and stand up.',
+  },
+  {
+    id: 'leg-reposition', name: 'Reposition Legs', category: 'transition', style: 'leg-locker',
+    positionRequired: ['leg-entanglement'], positionResult: 'leg-entanglement',
+    power: 0, accuracy: 88, staminaCost: 6, statAttack: 'tec', statDefense: 'tec',
+    chainPotential: ['heel-hook', 'kneebar', 'toe-hold'], description: 'Improve leg lock position.',
+  },
+
+  // Half-Guard-Bottom (needs more variety)
+  {
+    id: 'lockdown', name: 'Lockdown', category: 'transition', style: 'guard-player',
+    positionRequired: ['half-guard-bottom'], positionResult: 'half-guard-bottom',
+    power: 15, accuracy: 85, staminaCost: 8, statAttack: 'flx', statDefense: 'str',
+    chainPotential: ['deep-half-sweep', 'berimbolo-sweep'], description: 'Lock down the leg. Control the pace.',
+  },
+
+  // Standing (add clinch entry)
+  {
+    id: 'clinch-entry', name: 'Clinch Up', category: 'transition', style: 'judoka',
+    positionRequired: ['standing'], positionResult: 'clinch',
+    power: 0, accuracy: 88, staminaCost: 8, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['osoto-gari', 'seoi-nage', 'guillotine'], description: 'Engage the clinch.',
+  },
 ];
 
 // Index for quick lookup
