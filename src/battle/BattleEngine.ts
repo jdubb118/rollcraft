@@ -71,20 +71,29 @@ function computeFirstActor(state: BattleState): 'player' | 'opponent' {
   return playerATB >= opponentATB ? 'player' : 'opponent';
 }
 
-// ── Award IBJJF points ──
+// ── Award IBJJF points — only the HIGHEST scoring event per move ──
+// In IBJJF, positions require 3-second stabilization. We approximate by
+// awarding only the most valuable achievement per move (not stacking).
 function awardPositionPoints(state: BattleState, move: Move, attackerIs: 'player' | 'opponent', oldPosition: Position): void {
   if (!move.resultPosition) return;
   const newPos = move.resultPosition;
   let pts = 0, reason = '';
 
-  if ((oldPosition === 'standing' || oldPosition === 'clinch') && move.category === 'takedown' && move.resultRole === 'top') {
+  // Check events from highest value to lowest — only one fires
+  if (newPos === 'mount' && move.resultRole === 'top') {
+    pts = POINTS.mount; reason = 'MOUNT';
+  } else if (newPos === 'back-control' && move.resultRole === 'top') {
+    pts = POINTS.backControl; reason = 'BACK CONTROL';
+  } else if (move.category === 'pass' && newPos !== 'open-guard' && newPos !== 'half-guard') {
+    // Only score pass when landing in a dominant position (not open/half guard)
+    pts = POINTS.guardPass; reason = 'GUARD PASS';
+  } else if (newPos === 'knee-on-belly' && move.resultRole === 'top') {
+    pts = POINTS.kneeOnBelly; reason = 'KNEE ON BELLY';
+  } else if ((oldPosition === 'standing' || oldPosition === 'clinch') && move.category === 'takedown' && move.resultRole === 'top') {
     pts = POINTS.takedown; reason = 'TAKEDOWN';
+  } else if (move.category === 'sweep') {
+    pts = POINTS.sweep; reason = 'SWEEP';
   }
-  if (move.category === 'sweep') { pts = POINTS.sweep; reason = 'SWEEP'; }
-  if (move.category === 'pass') { pts = POINTS.guardPass; reason = 'GUARD PASS'; }
-  if (newPos === 'mount' && move.resultRole === 'top') { pts = POINTS.mount; reason = 'MOUNT'; }
-  if (newPos === 'back-control' && move.resultRole === 'top') { pts = POINTS.backControl; reason = 'BACK CONTROL'; }
-  if (newPos === 'knee-on-belly' && move.resultRole === 'top') { pts = POINTS.kneeOnBelly; reason = 'KNEE ON BELLY'; }
 
   if (pts > 0) {
     if (attackerIs === 'player') state.playerPoints += pts;
@@ -170,11 +179,16 @@ function executeMove(
 
   // ── STALL ──
   if (move.id === '__stall__') {
+    // Consecutive stall penalty — ref awards advantage to opponent
+    if (attacker.lastMoveId === null) {
+      const opponentIs = attackerIs === 'player' ? 'opponent' : 'player';
+      awardAdvantage(state, opponentIs, `stalling penalty (${attackerName})`);
+      state.log.push(`⚠ Ref warning: ${attackerName} penalized for stalling!`);
+    }
     const recovery = 15 + Math.floor(attacker.stats.end / 10);
     attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
     if (attacker.currentStamina > attacker.maxStamina * 0.2) attacker.isGassed = false;
     attacker.lastMoveId = null;
-    // Stall resets momentum
     if (attacker.momentum > 0) {
       attacker.momentum = 0;
       state.log.push(`Momentum reset!`);

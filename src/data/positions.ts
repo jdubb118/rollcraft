@@ -34,7 +34,7 @@ export const POSITIONS: Record<Position, PositionData> = {
     advantage: 'slight-top', atbModTop: 1.05, atbModBottom: 0.95,
     damageModTop: 1.05, damageModBottom: 0.95,
     topCategories: ['pass', 'submission', 'transition'],
-    bottomCategories: ['sweep', 'escape', 'transition'],
+    bottomCategories: ['sweep', 'submission', 'escape', 'transition'],
   },
   'side-control': {
     id: 'side-control', name: 'Side Control', symmetric: false,

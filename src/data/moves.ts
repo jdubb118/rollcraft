@@ -106,13 +106,13 @@ export const MOVES: Move[] = [
   },
   {
     id: 'smash-pass', name: 'Smash Pass', category: 'pass', style: 'pressure-passer',
-    posReq: [top('half-guard'), top('closed-guard')], resultPosition: 'side-control', resultRole: 'top',
+    posReq: [top('half-guard'), top('open-guard')], resultPosition: 'side-control', resultRole: 'top',
     power: 55, accuracy: 72, staminaCost: 20, statAttack: 'str', statDefense: 'flx',
     chainPotential: ['americana'], description: 'Heavy cross-face pressure pass.',
   },
   {
     id: 'stack-pass', name: 'Stack Pass', category: 'pass', style: 'pressure-passer',
-    posReq: [top('closed-guard')], resultPosition: 'side-control', resultRole: 'top',
+    posReq: [top('open-guard')], resultPosition: 'side-control', resultRole: 'top',
     power: 50, accuracy: 75, staminaCost: 18, statAttack: 'str', statDefense: 'flx',
     chainPotential: ['ns-transition'], description: 'Stack the hips and drive through.',
   },
@@ -385,7 +385,7 @@ export const MOVES: Move[] = [
     chainPotential: ['toreando', 'leg-drag', 'knee-cut'], description: 'Break posture and open the guard.',
   },
   {
-    id: 'guard-slam', name: 'Guard Break', category: 'pass', style: 'wrestler',
+    id: 'guard-slam', name: 'Guard Break', category: 'transition', style: 'wrestler',
     posReq: [top('closed-guard')], resultPosition: 'open-guard', resultRole: 'top',
     power: 35, accuracy: 78, staminaCost: 16, statAttack: 'str', statDefense: 'flx',
     chainPotential: ['knee-cut', 'toreando'], description: 'Force the guard open with pressure.',
@@ -447,9 +447,9 @@ export const MOVES: Move[] = [
   },
   {
     id: 'o-goshi', name: 'O Goshi', category: 'takedown', style: 'judoka',
-    posReq: [neu('clinch')], resultPosition: 'mount', resultRole: 'top',
+    posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
     power: 60, accuracy: 72, staminaCost: 20, statAttack: 'str', statDefense: 'tgh',
-    chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Major hip throw. Land in mount.',
+    chainPotential: ['americana', 'kob-transition'], description: 'Major hip throw. Land in side control.',
     impact: { flinchChance: 0.25, recoil: 6 },
   },
   {
@@ -749,13 +749,13 @@ export const MOVES: Move[] = [
   // ── ADVANCED PASSES (6 new) ──
   {
     id: 'over-under', name: 'Over-Under Pass', category: 'pass', style: 'pressure-passer',
-    posReq: [top('closed-guard'), top('half-guard')], resultPosition: 'side-control', resultRole: 'top',
+    posReq: [top('open-guard'), top('half-guard')], resultPosition: 'side-control', resultRole: 'top',
     power: 50, accuracy: 78, staminaCost: 18, statAttack: 'str', statDefense: 'flx',
     chainPotential: ['americana', 'darce'], description: 'Bernardo Faria special. Heavy pressure pass.',
   },
   {
     id: 'body-lock-pass', name: 'Body Lock Pass', category: 'pass', style: 'pressure-passer',
-    posReq: [top('closed-guard'), top('half-guard'), top('open-guard')],
+    posReq: [top('half-guard'), top('open-guard')],
     resultPosition: 'side-control', resultRole: 'top',
     power: 45, accuracy: 80, staminaCost: 16, statAttack: 'str', statDefense: 'flx',
     chainPotential: ['kob-transition', 'ns-transition'], description: 'Gordon Ryan system. Body lock and slide.',

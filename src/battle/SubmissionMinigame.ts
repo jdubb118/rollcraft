@@ -40,12 +40,16 @@ export function resolveSubmissionPhase(
   let attackRoll = Math.floor(attacker.stats.tec * 0.6 + attacker.stats.str * 0.4) + randInt(0, 20);
   const defendRoll = Math.floor(defender.stats.flx * 0.5 + defender.stats.tgh * 0.3 + defender.stats.end * 0.2) + randInt(0, 20);
 
-  // Position bonus
+  // Position bonus — works for BOTH top and bottom submissions
+  // Dominant top (mount/back) = big bonus for top attacker
+  // Bottom advantage (closed guard) = bonus for bottom attacker (armbars, triangles)
   const posData = POSITIONS[position];
   let posBonus = 0;
   if (posData.advantage === 'dominant-top') posBonus = 15;
   else if (posData.advantage === 'top') posBonus = 10;
   else if (posData.advantage === 'slight-top') posBonus = 5;
+  else if (posData.advantage === 'slight-bottom') posBonus = 8; // closed guard = strong sub position
+  else if (posData.advantage === 'neutral') posBonus = 3; // leg entanglement, clinch
   attackRoll += posBonus;
 
   // Chain bonus (phase 1 only)
