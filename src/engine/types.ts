@@ -120,9 +120,13 @@ export interface PositionData {
   bottomCategories: MoveCategory[];
 }
 
+// ── Match rules ──
+export type RuleSet = 'points' | 'submission-only' | 'adcc';
+
 // ── Battle state — SINGLE shared position ──
 export interface BattleState {
   turn: number;
+  maxTurns: number;                  // match timer (turns = ~30s each)
   player: BattleGrappler;
   opponent: BattleGrappler;
   position: Position;               // ONE shared position
@@ -130,11 +134,20 @@ export interface BattleState {
   phase: 'select-move' | 'opponent-acting' | 'animating' | 'submission' | 'battle-over';
   log: string[];
   winner: 'player' | 'opponent' | null;
+  winMethod: 'submission' | 'points' | 'advantages' | 'draw' | null;
   submissionPhase: number;
   activeSubmission: Move | null;
   submissionAttacker: 'player' | 'opponent' | null;
   firstActor: 'player' | 'opponent'; // who acts first this turn (speed-based)
   firstActorDone: boolean;           // has first actor acted?
+  // Scoring
+  playerPoints: number;
+  opponentPoints: number;
+  playerAdvantages: number;
+  opponentAdvantages: number;
+  ruleSet: RuleSet;
+  // Position hold tracking (need 3s / ~1 turn to score)
+  lastPositionChange: { position: Position; who: 'player' | 'opponent'; turn: number } | null;
 }
 
 // ── Archetype (starter template) ──
@@ -150,13 +163,15 @@ export interface Archetype {
 
 // ── Battle result ──
 export interface BattleResult {
-  winner: 'player' | 'opponent';
-  method: 'submission' | 'ko' | 'points';
+  winner: 'player' | 'opponent' | 'draw';
+  method: 'submission' | 'points' | 'advantages' | 'draw';
   xpGained: number;
   turns: number;
   playerName: string;
   opponentName: string;
   opponentStyle: Style;
+  playerPoints?: number;
+  opponentPoints?: number;
 }
 
 // ── World / Region system ──

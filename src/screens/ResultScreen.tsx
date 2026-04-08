@@ -22,6 +22,7 @@ export default function ResultScreen() {
   }
 
   const isWin = result.winner === 'player';
+  const isDraw = result.winner === 'draw';
 
   // Apply XP
   const newXp = player.xp + result.xpGained;
@@ -30,7 +31,7 @@ export default function ResultScreen() {
   const promoted = newXp >= nextBeltXp && nextBelt;
 
   // Money earned from the match
-  const moneyEarned = isWin ? 25 + Math.floor(result.turns * 2) : 10;
+  const moneyEarned = isWin ? 25 + Math.floor(result.turns * 2) : isDraw ? 15 : 10;
 
   const handleContinue = () => {
     player.xp = newXp;
@@ -40,7 +41,7 @@ export default function ResultScreen() {
     savePlayer(player);
     // Record progression
     if (isWin) recordWin();
-    else recordLoss();
+    else if (!isDraw) recordLoss();
     addMoney(moneyEarned);
     navigate('/overworld');
   };
@@ -67,16 +68,19 @@ export default function ResultScreen() {
       {/* Result */}
       <div style={{
         fontSize: '1.2rem',
-        color: isWin ? '#22c55e' : '#ef4444',
-        textShadow: `0 0 20px ${isWin ? '#22c55e' : '#ef4444'}44`,
+        color: isWin ? '#22c55e' : isDraw ? '#888' : '#ef4444',
+        textShadow: `0 0 20px ${isWin ? '#22c55e' : isDraw ? '#888' : '#ef4444'}44`,
       }}>
-        {isWin ? 'VICTORY!' : 'DEFEAT'}
+        {isWin ? 'VICTORY!' : isDraw ? 'DRAW' : 'DEFEAT'}
       </div>
 
       {/* Match info */}
       <div style={{ textAlign: 'center', fontSize: '0.4rem', color: '#888', lineHeight: 2 }}>
         <div>vs {result.opponentName} ({STYLE_NAMES[result.opponentStyle]})</div>
         <div>Method: {result.method.toUpperCase()}</div>
+        {(result.playerPoints !== undefined) && (
+          <div>Score: {result.playerPoints} - {result.opponentPoints}</div>
+        )}
         <div>Turns: {result.turns}</div>
       </div>
 
