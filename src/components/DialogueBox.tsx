@@ -76,12 +76,12 @@ export default function DialogueBox({ speakerName, text, menuOptions, selectedIn
         <button
           onClick={onDismiss}
           style={{
-            marginTop: 6, fontSize: '0.3rem', color: '#666',
-            background: 'none', border: 'none',
-            fontFamily: "'Press Start 2P', monospace",
+            marginTop: 8, padding: '8px 14px', fontSize: '0.35rem', color: '#888',
+            background: '#111', border: '1px solid #444', width: '100%',
+            fontFamily: "'Press Start 2P', monospace", cursor: 'pointer',
           }}
         >
-          TAP TO CLOSE
+          ► CONTINUE
         </button>
       )}
     </div>

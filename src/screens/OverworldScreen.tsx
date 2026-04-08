@@ -46,6 +46,8 @@ export default function OverworldScreen() {
   const menuIndexRef = useRef(0);
   const menuOptionsRef = useRef<MenuOption[] | null>(null);
   const handleActionRef = useRef<() => void>(() => {});
+  const handleMenuSelectRef = useRef<(action: string) => void>(() => {});
+  const handleDismissRef = useRef<() => void>(() => {});
   const navigate = useNavigate();
 
   // Load player and init overworld
@@ -142,11 +144,11 @@ export default function OverworldScreen() {
         // Select a menu option
         const opt = opts[idx];
         if (!opt.disabled) {
-          handleMenuSelect(opt.action);
+          handleMenuSelectRef.current(opt.action);
         }
       } else {
         // CANCEL selected
-        handleDismiss();
+        handleDismissRef.current();
       }
       return;
     }
@@ -199,7 +201,7 @@ export default function OverworldScreen() {
     menuIndexRef.current = 0;
   }, []);
 
-  // Keep ref in sync so keyboard listener always calls latest version
+  // Keep refs in sync so keyboard listener always calls latest version
   handleActionRef.current = handleAction;
 
   // Handle menu selection — uses ref to avoid stale closure
@@ -214,11 +216,13 @@ export default function OverworldScreen() {
     } else if (action === 'learn') {
       setDialogueText(npc.def.dialogue.teach || 'I can teach you...');
       setMenuOptions(null);
+      menuOptionsRef.current = null;
     } else if (action === 'promote') {
       navigate('/promotion');
     } else if (action === 'exam') {
       setDialogueText("You need more mat time before your next belt. Keep training.");
       setMenuOptions(null);
+      menuOptionsRef.current = null;
     }
   }, [navigate]);
 
@@ -235,6 +239,10 @@ export default function OverworldScreen() {
     setMenuIndex(0);
     menuIndexRef.current = 0;
   }, []);
+
+  // Keep all callback refs in sync
+  handleMenuSelectRef.current = handleMenuSelect;
+  handleDismissRef.current = handleDismiss;
 
   if (!player) return <div style={{ color: '#fff', padding: 20 }}>Loading...</div>;
 
