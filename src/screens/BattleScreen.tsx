@@ -54,7 +54,6 @@ export default function BattleScreen() {
     setState(newState);
 
     if (newState.phase === 'battle-over' && newState.winner) {
-      // Save result and navigate after delay
       const xpGained = newState.winner === 'player'
         ? 100 + Math.floor(newState.turn * 2)
         : Math.floor(30 + newState.turn);
@@ -70,7 +69,7 @@ export default function BattleScreen() {
           opponentStyle: newState.opponent.grappler.style,
         });
         navigate('/results');
-      }, 2000);
+      }, 2500);
     }
   }, [state, navigate]);
 
@@ -80,6 +79,24 @@ export default function BattleScreen() {
   const posName = POSITIONS[state.playerPosition].name;
   const isOver = state.phase === 'battle-over';
 
+  // Color-code log lines
+  const playerName = state.player.grappler.name;
+  const opponentName = state.opponent.grappler.name;
+
+  function getLogColor(line: string): string {
+    if (line.startsWith('---')) return '#555';
+    if (line.startsWith(playerName)) return '#22c55e';
+    if (line.startsWith(opponentName)) return '#ef4444';
+    if (line.includes('super effective') || line.includes('effective!')) return '#ffd700';
+    if (line.includes('Not very')) return '#888';
+    if (line.includes('TAP') || line.includes('taps out') || line.includes("can't continue")) return '#ff6b6b';
+    if (line.includes('Position:')) return '#ffd700';
+    if (line.includes('deals')) return '#ccc';
+    if (line.includes('missed')) return '#666';
+    if (line.includes('Escaped') || line.includes('escaped')) return '#3b82f6';
+    return '#aaa';
+  }
+
   return (
     <div style={{
       width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
@@ -87,7 +104,7 @@ export default function BattleScreen() {
     }}>
       {/* Canvas area */}
       <div style={{
-        flex: '1 1 55%', display: 'flex', justifyContent: 'center', alignItems: 'center',
+        flex: '1 1 45%', display: 'flex', justifyContent: 'center', alignItems: 'center',
         overflow: 'hidden', minHeight: 0,
       }}>
         <canvas
@@ -104,13 +121,30 @@ export default function BattleScreen() {
       {/* UI area */}
       <div style={{
         flex: '0 0 auto', padding: '4px 0 8px', display: 'flex', flexDirection: 'column',
-        gap: 6, maxHeight: '45%',
+        gap: 4, maxHeight: '55%',
       }}
       className="safe-bottom"
       >
+        {/* Battle log — above moves, scrollable */}
+        <div
+          ref={logRef}
+          className="no-scrollbar"
+          style={{
+            fontSize: '0.38rem', padding: '2px 10px',
+            maxHeight: 72, overflowY: 'auto', lineHeight: 1.7,
+            background: '#0d0d1a', borderTop: '1px solid #222', borderBottom: '1px solid #222',
+          }}
+        >
+          {state.log.slice(-8).map((line, i) => (
+            <div key={i} style={{ color: getLogColor(line) }}>
+              {line}
+            </div>
+          ))}
+        </div>
+
         {/* Position indicator */}
         <div style={{
-          textAlign: 'center', fontSize: '0.55rem', color: '#ffd700',
+          textAlign: 'center', fontSize: '0.5rem', color: '#ffd700',
           padding: '2px 0',
         }}>
           {posName.toUpperCase()}
@@ -135,20 +169,6 @@ export default function BattleScreen() {
             {state.winner === 'player' ? 'YOU WIN!' : 'YOU LOSE!'}
           </div>
         )}
-
-        {/* Battle log */}
-        <div
-          ref={logRef}
-          className="no-scrollbar"
-          style={{
-            fontSize: '0.4rem', color: '#888', padding: '0 12px',
-            maxHeight: 48, overflowY: 'auto', lineHeight: 1.6,
-          }}
-        >
-          {state.log.slice(-4).map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
-        </div>
       </div>
     </div>
   );
