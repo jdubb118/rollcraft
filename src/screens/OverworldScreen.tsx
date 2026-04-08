@@ -39,11 +39,13 @@ export default function OverworldScreen() {
   const inputRef = useRef({ up: false, down: false, left: false, right: false });
   const [player, setPlayer] = useState<Grappler | null>(null);
   const [dialogueNPC, setDialogueNPC] = useState<NPCState | null>(null);
+  const dialogueNPCRef = useRef<NPCState | null>(null);
   const [dialogueText, setDialogueText] = useState<string>('');
   const [menuOptions, setMenuOptions] = useState<MenuOption[] | null>(null);
   const [menuIndex, setMenuIndex] = useState(0);
   const menuIndexRef = useRef(0);
   const menuOptionsRef = useRef<MenuOption[] | null>(null);
+  const handleActionRef = useRef<() => void>(() => {});
   const navigate = useNavigate();
 
   // Load player and init overworld
@@ -108,7 +110,7 @@ export default function OverworldScreen() {
       }
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        handleAction();
+        handleActionRef.current();
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -153,6 +155,7 @@ export default function OverworldScreen() {
     if (state.interactingNPC) {
       state.interactingNPC = null;
       setDialogueNPC(null);
+      dialogueNPCRef.current = null;
       setDialogueText('');
       setMenuOptions(null);
       menuOptionsRef.current = null;
@@ -165,6 +168,7 @@ export default function OverworldScreen() {
 
     state.interactingNPC = npc.def.id;
     setDialogueNPC(npc);
+    dialogueNPCRef.current = npc;
     // Use coach name for professor NPC
     const greeting = npc.def.role === 'professor' && player?.coachName
       ? npc.def.dialogue.greeting.replace('Prof. Helio', player.coachName)
@@ -195,25 +199,28 @@ export default function OverworldScreen() {
     menuIndexRef.current = 0;
   }, []);
 
-  // Handle menu selection
+  // Keep ref in sync so keyboard listener always calls latest version
+  handleActionRef.current = handleAction;
+
+  // Handle menu selection — uses ref to avoid stale closure
   const handleMenuSelect = useCallback((action: string) => {
-    if (!dialogueNPC || !stateRef.current) return;
+    const npc = dialogueNPCRef.current;
+    if (!npc || !stateRef.current) return;
 
     if (action === 'roll') {
-      // Save opponent and go to battle
-      const opponent = npcToGrappler(dialogueNPC);
+      const opponent = npcToGrappler(npc);
       saveOpponent(opponent);
       navigate('/battle');
     } else if (action === 'learn') {
-      setDialogueText(dialogueNPC.def.dialogue.teach || 'I can teach you...');
-      setMenuOptions(null); // TODO: show learnable moves list
+      setDialogueText(npc.def.dialogue.teach || 'I can teach you...');
+      setMenuOptions(null);
     } else if (action === 'promote') {
       navigate('/promotion');
     } else if (action === 'exam') {
       setDialogueText("You need more mat time before your next belt. Keep training.");
       setMenuOptions(null);
     }
-  }, [dialogueNPC, navigate]);
+  }, [navigate]);
 
   // Dismiss dialogue
   const handleDismiss = useCallback(() => {
@@ -221,6 +228,7 @@ export default function OverworldScreen() {
       stateRef.current.interactingNPC = null;
     }
     setDialogueNPC(null);
+    dialogueNPCRef.current = null;
     setDialogueText('');
     setMenuOptions(null);
     menuOptionsRef.current = null;
