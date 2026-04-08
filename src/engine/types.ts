@@ -158,3 +158,53 @@ export interface BattleResult {
   opponentName: string;
   opponentStyle: Style;
 }
+
+// ── World / Region system ──
+export interface WorldRegion {
+  id: string;
+  name: string;
+  description: string;
+  styleSpecialty: Style | null;
+  unlockRequirements: UnlockRequirement[];
+  stampId: string | null;
+  stampName: string | null;
+  color: string; // for world map display
+}
+
+export interface UnlockRequirement {
+  type: 'belt' | 'stamp-count' | 'tournament-win' | 'npc-wins';
+  value: string | number;
+  label: string; // human-readable description
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  regionId: string;
+  bracketSize: 4 | 8 | 16 | 32 | 64;
+  beltMin: Belt;
+  beltMax: Belt;
+  entryFee: number;
+  prizePool: { gold: number; silver: number; bronze: number };
+  ruleSet: 'points' | 'submission-only' | 'adcc';
+}
+
+export interface TournamentResult {
+  tournamentId: string;
+  placement: 'gold' | 'silver' | 'bronze' | 'out';
+  prizeMoney: number;
+  timestamp: number;
+}
+
+export interface PlayerProgression {
+  stamps: string[];
+  tournamentResults: TournamentResult[];
+  money: number;
+  sponsorships: { name: string; income: number }[];
+  specialization: string | null;
+  currentRegionId: string;
+  storyFlags: Record<string, boolean>;
+  npcDefeated: Record<string, boolean>;
+  totalWins: number;
+  totalLosses: number;
+}

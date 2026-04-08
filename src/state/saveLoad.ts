@@ -1,9 +1,11 @@
-import type { Grappler, BattleResult } from '../engine/types';
+import type { Grappler, BattleResult, PlayerProgression } from '../engine/types';
 
 const PLAYER_KEY = 'rollcraft-player';
 const OPPONENT_KEY = 'rollcraft-opponent';
 const RESULT_KEY = 'rollcraft-result';
+const PROGRESSION_KEY = 'rollcraft-progression';
 
+// ── Player ──
 export function savePlayer(grappler: Grappler): void {
   localStorage.setItem(PLAYER_KEY, JSON.stringify(grappler));
 }
@@ -13,6 +15,7 @@ export function loadPlayer(): Grappler | null {
   return data ? JSON.parse(data) : null;
 }
 
+// ── Opponent ──
 export function saveOpponent(grappler: Grappler): void {
   localStorage.setItem(OPPONENT_KEY, JSON.stringify(grappler));
 }
@@ -22,6 +25,7 @@ export function loadOpponent(): Grappler | null {
   return data ? JSON.parse(data) : null;
 }
 
+// ── Battle Result ──
 export function saveBattleResult(result: BattleResult): void {
   localStorage.setItem(RESULT_KEY, JSON.stringify(result));
 }
@@ -31,6 +35,78 @@ export function loadBattleResult(): BattleResult | null {
   return data ? JSON.parse(data) : null;
 }
 
+// ── Progression (world state) ──
+const DEFAULT_PROGRESSION: PlayerProgression = {
+  stamps: [],
+  tournamentResults: [],
+  money: 100, // start with 100 Mat Bucks
+  sponsorships: [],
+  specialization: null,
+  currentRegionId: 'home',
+  storyFlags: {},
+  npcDefeated: {},
+  totalWins: 0,
+  totalLosses: 0,
+};
+
+export function saveProgression(progression: PlayerProgression): void {
+  localStorage.setItem(PROGRESSION_KEY, JSON.stringify(progression));
+}
+
+export function loadProgression(): PlayerProgression {
+  const data = localStorage.getItem(PROGRESSION_KEY);
+  if (!data) return { ...DEFAULT_PROGRESSION };
+  return { ...DEFAULT_PROGRESSION, ...JSON.parse(data) };
+}
+
+export function updateProgression(updates: Partial<PlayerProgression>): PlayerProgression {
+  const current = loadProgression();
+  const updated = { ...current, ...updates };
+  saveProgression(updated);
+  return updated;
+}
+
+// Record a win
+export function recordWin(npcId?: string): void {
+  const prog = loadProgression();
+  prog.totalWins++;
+  if (npcId) prog.npcDefeated[npcId] = true;
+  saveProgression(prog);
+}
+
+// Record a loss
+export function recordLoss(): void {
+  const prog = loadProgression();
+  prog.totalLosses++;
+  saveProgression(prog);
+}
+
+// Add money
+export function addMoney(amount: number): void {
+  const prog = loadProgression();
+  prog.money += amount;
+  saveProgression(prog);
+}
+
+// Spend money (returns false if not enough)
+export function spendMoney(amount: number): boolean {
+  const prog = loadProgression();
+  if (prog.money < amount) return false;
+  prog.money -= amount;
+  saveProgression(prog);
+  return true;
+}
+
+// Add a stamp
+export function addStamp(stampId: string): void {
+  const prog = loadProgression();
+  if (!prog.stamps.includes(stampId)) {
+    prog.stamps.push(stampId);
+    saveProgression(prog);
+  }
+}
+
+// ── Utilities ──
 export function hasExistingPlayer(): boolean {
   return localStorage.getItem(PLAYER_KEY) !== null;
 }
@@ -39,4 +115,5 @@ export function clearAll(): void {
   localStorage.removeItem(PLAYER_KEY);
   localStorage.removeItem(OPPONENT_KEY);
   localStorage.removeItem(RESULT_KEY);
+  localStorage.removeItem(PROGRESSION_KEY);
 }

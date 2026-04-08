@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { loadBattleResult, loadPlayer, savePlayer } from '../state/saveLoad';
+import { loadBattleResult, loadPlayer, savePlayer, recordWin, recordLoss, addMoney } from '../state/saveLoad';
 import { STYLE_NAMES } from '../engine/constants';
 import { BELT_XP_THRESHOLDS } from '../engine/types';
 import type { Belt } from '../engine/types';
@@ -29,13 +29,19 @@ export default function ResultScreen() {
   const nextBeltXp = nextBelt ? BELT_XP_THRESHOLDS[nextBelt] : Infinity;
   const promoted = newXp >= nextBeltXp && nextBelt;
 
+  // Money earned from the match
+  const moneyEarned = isWin ? 25 + Math.floor(result.turns * 2) : 10;
+
   const handleContinue = () => {
-    // Update player
     player.xp = newXp;
     if (promoted && nextBelt) {
       player.belt = nextBelt;
     }
     savePlayer(player);
+    // Record progression
+    if (isWin) recordWin();
+    else recordLoss();
+    addMoney(moneyEarned);
     navigate('/overworld');
   };
 

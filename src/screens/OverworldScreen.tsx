@@ -203,16 +203,28 @@ export default function OverworldScreen() {
         <span style={{ fontSize: '0.35rem', color: '#888' }}>
           Lv{getLevel(player)} | {player.xp} XP
         </span>
-        <button
-          onClick={() => navigate('/stats')}
-          style={{
-            padding: '4px 8px', background: '#1a1a2e', color: '#ffd700',
-            fontSize: '0.35rem', border: '1px solid #ffd700',
-            fontFamily: "'Press Start 2P', monospace",
-          }}
-        >
-          MENU
-        </button>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={() => navigate('/world')}
+            style={{
+              padding: '4px 8px', background: '#1a1a2e', color: '#3498db',
+              fontSize: '0.3rem', border: '1px solid #3498db',
+              fontFamily: "'Press Start 2P', monospace",
+            }}
+          >
+            MAP
+          </button>
+          <button
+            onClick={() => navigate('/stats')}
+            style={{
+              padding: '4px 8px', background: '#1a1a2e', color: '#ffd700',
+              fontSize: '0.3rem', border: '1px solid #ffd700',
+              fontFamily: "'Press Start 2P', monospace",
+            }}
+          >
+            MENU
+          </button>
+        </div>
       </div>
 
       {/* Canvas */}
