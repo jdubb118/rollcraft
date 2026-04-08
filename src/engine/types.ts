@@ -3,19 +3,16 @@ export type Style =
   | 'wrestler' | 'judoka' | 'guard-player' | 'pressure-passer'
   | 'leg-locker' | 'berimbolo' | 'sub-hunter' | 'controller';
 
-// ── Positions (state machine nodes) ──
+// ── Shared position (the mat state — ONE state, not two) ──
 export type Position =
   | 'standing' | 'clinch'
-  | 'closed-guard-top' | 'closed-guard-bottom'
-  | 'open-guard-top' | 'open-guard-bottom'
-  | 'half-guard-top' | 'half-guard-bottom'
-  | 'side-control' | 'side-control-bottom'
-  | 'mount' | 'mount-bottom'
-  | 'back-control' | 'back-control-bottom'
-  | 'turtle-top' | 'turtle-bottom'
-  | 'knee-on-belly'
-  | 'north-south'
+  | 'closed-guard' | 'open-guard' | 'half-guard'
+  | 'side-control' | 'mount' | 'back-control' | 'turtle'
+  | 'knee-on-belly' | 'north-south'
   | 'leg-entanglement';
+
+// ── Role within the shared position ──
+export type PositionRole = 'top' | 'bottom' | 'neutral';
 
 // ── Move categories ──
 export type MoveCategory = 'takedown' | 'sweep' | 'pass' | 'submission' | 'escape' | 'transition';
@@ -27,69 +24,41 @@ export type StatKey = 'str' | 'tec' | 'tgh' | 'flx' | 'spd' | 'end';
 export type Belt = 'white' | 'blue' | 'purple' | 'brown' | 'black';
 
 export const BELT_LEVELS: Record<Belt, number> = {
-  white: 1,
-  blue: 15,
-  purple: 30,
-  brown: 45,
-  black: 60,
+  white: 1, blue: 15, purple: 30, brown: 45, black: 60,
 };
 
 export const BELT_XP_THRESHOLDS: Record<Belt, number> = {
-  white: 0,
-  blue: 1500,
-  purple: 5000,
-  brown: 12000,
-  black: 25000,
+  white: 0, blue: 1500, purple: 5000, brown: 12000, black: 25000,
 };
 
 export const BELT_MOVE_SLOTS: Record<Belt, number> = {
-  white: 4,
-  blue: 6,
-  purple: 8,
-  brown: 10,
-  black: 12,
+  white: 4, blue: 6, purple: 8, brown: 10, black: 12,
 };
 
 // ── IVs (rolled at creation, 0-15) ──
 export interface IVs {
-  str: number;
-  tec: number;
-  tgh: number;
-  flx: number;
-  spd: number;
-  end: number;
+  str: number; tec: number; tgh: number; flx: number; spd: number; end: number;
 }
 
 // ── EVs (earned, 0-252 each, 510 total cap) ──
 export interface EVs {
-  str: number;
-  tec: number;
-  tgh: number;
-  flx: number;
-  spd: number;
-  end: number;
+  str: number; tec: number; tgh: number; flx: number; spd: number; end: number;
 }
 
 // ── Base stats ──
 export interface BaseStats {
-  hp: number;
-  str: number;
-  tec: number;
-  tgh: number;
-  flx: number;
-  spd: number;
-  end: number;
+  hp: number; str: number; tec: number; tgh: number; flx: number; spd: number; end: number;
 }
 
 // ── Computed stats ──
 export interface Stats {
-  maxHp: number;
-  str: number;
-  tec: number;
-  tgh: number;
-  flx: number;
-  spd: number;
-  end: number;
+  maxHp: number; str: number; tec: number; tgh: number; flx: number; spd: number; end: number;
+}
+
+// ── Position requirement for a move ──
+export interface PosReq {
+  position: Position;
+  role: PositionRole; // 'top', 'bottom', or 'neutral' (for standing/clinch/legs)
 }
 
 // ── Move definition ──
@@ -98,8 +67,9 @@ export interface Move {
   name: string;
   category: MoveCategory;
   style: Style;
-  positionRequired: Position[];
-  positionResult: Position | null; // null = no position change (submissions stay in place or end fight)
+  posReq: PosReq[];                        // which position+role combinations allow this move
+  resultPosition: Position | null;          // new shared position after success (null = no change)
+  resultRole: 'top' | 'bottom' | 'neutral' | null; // attacker's role in new position (null = no change)
   power: number;
   accuracy: number;
   staminaCost: number;
@@ -120,9 +90,9 @@ export interface Grappler {
   ivs: IVs;
   evs: EVs;
   moves: string[]; // move IDs
-  giColor?: string; // player gi color (hex)
-  gymName?: string; // home gym name
-  coachName?: string; // coach name
+  giColor?: string;
+  gymName?: string;
+  coachName?: string;
 }
 
 // ── Battle-time grappler ──
@@ -136,31 +106,35 @@ export interface BattleGrappler {
   lastMoveId: string | null;
 }
 
-// ── Position data ──
+// ── Shared position data ──
 export interface PositionData {
   id: Position;
   name: string;
+  symmetric: boolean; // true for standing, clinch, leg-entanglement
   advantage: 'dominant-top' | 'top' | 'slight-top' | 'neutral' | 'slight-bottom';
   atbModTop: number;
   atbModBottom: number;
-  damageMod: number;
-  pair: Position; // the other fighter's position
-  availableCategories: MoveCategory[];
+  damageModTop: number;
+  damageModBottom: number;
+  topCategories: MoveCategory[];
+  bottomCategories: MoveCategory[];
 }
 
-// ── Battle state ──
+// ── Battle state — SINGLE shared position ──
 export interface BattleState {
   turn: number;
   player: BattleGrappler;
   opponent: BattleGrappler;
-  playerPosition: Position;
-  opponentPosition: Position;
-  phase: 'select-move' | 'animating' | 'submission' | 'battle-over';
+  position: Position;               // ONE shared position
+  topFighter: 'player' | 'opponent' | null; // who is top (null = symmetric)
+  phase: 'select-move' | 'opponent-acting' | 'animating' | 'submission' | 'battle-over';
   log: string[];
   winner: 'player' | 'opponent' | null;
-  submissionPhase: number; // 0 = not in submission
+  submissionPhase: number;
   activeSubmission: Move | null;
   submissionAttacker: 'player' | 'opponent' | null;
+  firstActor: 'player' | 'opponent'; // who acts first this turn (speed-based)
+  firstActorDone: boolean;           // has first actor acted?
 }
 
 // ── Archetype (starter template) ──

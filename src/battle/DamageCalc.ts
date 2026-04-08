@@ -1,8 +1,7 @@
-import type { Move, BattleGrappler, Stats, StatKey } from '../engine/types';
-import { getLevel } from './stats';
+import type { Move, BattleGrappler, Stats, StatKey, Position, PositionRole } from '../engine/types';
 import { getStyleEffectiveness } from '../data/styles';
 import { POSITIONS } from '../data/positions';
-import type { Position } from '../engine/types';
+import { getLevel } from './stats';
 import { damageRandom } from '../engine/random';
 
 function getStat(stats: Stats, key: StatKey): number {
@@ -13,45 +12,39 @@ export function calculateDamage(
   attacker: BattleGrappler,
   defender: BattleGrappler,
   move: Move,
-  attackerPosition: Position,
+  position: Position,
+  attackerRole: PositionRole,
 ): number {
   if (move.power === 0) return 0;
 
   const level = getLevel(attacker.grappler);
-
   const A = getStat(attacker.stats, move.statAttack);
   const D = Math.max(1, getStat(defender.stats, move.statDefense));
 
-  // Base damage (Pokemon Gen 1 formula)
   let damage = ((2 * level / 5 + 2) * move.power * (A / D)) / 50 + 2;
 
-  // STAB: 1.5x if move style matches grappler style
-  if (move.style === attacker.grappler.style) {
-    damage *= 1.5;
-  }
+  // STAB
+  if (move.style === attacker.grappler.style) damage *= 1.5;
 
   // Type effectiveness
-  const effectiveness = getStyleEffectiveness(move.style, defender.grappler.style);
-  damage *= effectiveness;
+  damage *= getStyleEffectiveness(move.style, defender.grappler.style);
 
-  // Position modifier
-  const posData = POSITIONS[attackerPosition];
-  if (posData) {
-    damage *= posData.damageMod;
-  }
+  // Position modifier based on role
+  const posData = POSITIONS[position];
+  const damageMod = attackerRole === 'top' ? posData.damageModTop
+    : attackerRole === 'bottom' ? posData.damageModBottom : 1.0;
+  damage *= damageMod;
 
   // Gassed penalty
-  if (attacker.isGassed) {
-    damage *= 0.6;
-  }
+  if (attacker.isGassed) damage *= 0.6;
 
-  // Random variance (0.85 to 1.0)
+  // Random variance
   damage *= damageRandom();
 
   return Math.max(1, Math.floor(damage));
 }
 
-export function getEffectivenessText(_attacker: BattleGrappler, defender: BattleGrappler, move: Move): string {
+export function getEffectivenessText(defender: BattleGrappler, move: Move): string {
   const eff = getStyleEffectiveness(move.style, defender.grappler.style);
   if (eff >= 2.0) return "It's super effective!";
   if (eff >= 1.5) return "It's effective!";

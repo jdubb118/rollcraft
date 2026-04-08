@@ -1,133 +1,108 @@
-import type { Position, PositionData, MoveCategory } from '../engine/types';
+import type { Position, PositionData, PositionRole } from '../engine/types';
 
 export const POSITIONS: Record<Position, PositionData> = {
   'standing': {
-    id: 'standing', name: 'Standing', advantage: 'neutral',
-    atbModTop: 1.0, atbModBottom: 1.0, damageMod: 1.0,
-    pair: 'standing',
-    availableCategories: ['takedown', 'transition'],
+    id: 'standing', name: 'Standing', symmetric: true,
+    advantage: 'neutral', atbModTop: 1.0, atbModBottom: 1.0,
+    damageModTop: 1.0, damageModBottom: 1.0,
+    topCategories: ['takedown', 'transition'],
+    bottomCategories: ['takedown', 'transition'],
   },
   'clinch': {
-    id: 'clinch', name: 'Clinch', advantage: 'neutral',
-    atbModTop: 1.0, atbModBottom: 1.0, damageMod: 1.0,
-    pair: 'clinch',
-    availableCategories: ['takedown', 'submission', 'transition'],
+    id: 'clinch', name: 'Clinch', symmetric: true,
+    advantage: 'neutral', atbModTop: 1.0, atbModBottom: 1.0,
+    damageModTop: 1.0, damageModBottom: 1.0,
+    topCategories: ['takedown', 'submission', 'transition'],
+    bottomCategories: ['takedown', 'submission', 'transition'],
   },
-  'closed-guard-top': {
-    id: 'closed-guard-top', name: 'Closed Guard (Top)', advantage: 'slight-bottom',
-    atbModTop: 0.9, atbModBottom: 1.1, damageMod: 0.9,
-    pair: 'closed-guard-bottom',
-    availableCategories: ['pass', 'transition'],
+  'closed-guard': {
+    id: 'closed-guard', name: 'Closed Guard', symmetric: false,
+    advantage: 'slight-bottom', atbModTop: 0.9, atbModBottom: 1.1,
+    damageModTop: 0.9, damageModBottom: 1.1,
+    topCategories: ['pass', 'transition'],
+    bottomCategories: ['sweep', 'submission', 'transition'],
   },
-  'closed-guard-bottom': {
-    id: 'closed-guard-bottom', name: 'Closed Guard (Bottom)', advantage: 'slight-bottom',
-    atbModTop: 0.9, atbModBottom: 1.1, damageMod: 1.1,
-    pair: 'closed-guard-top',
-    availableCategories: ['sweep', 'submission', 'transition'],
+  'open-guard': {
+    id: 'open-guard', name: 'Open Guard', symmetric: false,
+    advantage: 'neutral', atbModTop: 1.0, atbModBottom: 1.0,
+    damageModTop: 1.0, damageModBottom: 1.0,
+    topCategories: ['pass', 'transition'],
+    bottomCategories: ['sweep', 'submission', 'transition'],
   },
-  'open-guard-top': {
-    id: 'open-guard-top', name: 'Open Guard (Top)', advantage: 'neutral',
-    atbModTop: 1.0, atbModBottom: 1.0, damageMod: 1.0,
-    pair: 'open-guard-bottom',
-    availableCategories: ['pass', 'transition'],
-  },
-  'open-guard-bottom': {
-    id: 'open-guard-bottom', name: 'Open Guard (Bottom)', advantage: 'neutral',
-    atbModTop: 1.0, atbModBottom: 1.0, damageMod: 1.0,
-    pair: 'open-guard-top',
-    availableCategories: ['sweep', 'submission', 'transition'],
-  },
-  'half-guard-top': {
-    id: 'half-guard-top', name: 'Half Guard (Top)', advantage: 'slight-top',
-    atbModTop: 1.05, atbModBottom: 0.95, damageMod: 1.05,
-    pair: 'half-guard-bottom',
-    availableCategories: ['pass', 'submission', 'transition'],
-  },
-  'half-guard-bottom': {
-    id: 'half-guard-bottom', name: 'Half Guard (Bottom)', advantage: 'slight-top',
-    atbModTop: 1.05, atbModBottom: 0.95, damageMod: 0.95,
-    pair: 'half-guard-top',
-    availableCategories: ['sweep', 'escape', 'transition'],
+  'half-guard': {
+    id: 'half-guard', name: 'Half Guard', symmetric: false,
+    advantage: 'slight-top', atbModTop: 1.05, atbModBottom: 0.95,
+    damageModTop: 1.05, damageModBottom: 0.95,
+    topCategories: ['pass', 'submission', 'transition'],
+    bottomCategories: ['sweep', 'escape', 'transition'],
   },
   'side-control': {
-    id: 'side-control', name: 'Side Control', advantage: 'top',
-    atbModTop: 1.15, atbModBottom: 0.85, damageMod: 1.2,
-    pair: 'side-control-bottom',
-    availableCategories: ['submission', 'transition'],
-  },
-  'side-control-bottom': {
-    id: 'side-control-bottom', name: 'Side Control (Bottom)', advantage: 'top',
-    atbModTop: 1.15, atbModBottom: 0.85, damageMod: 0.7,
-    pair: 'side-control',
-    availableCategories: ['escape', 'transition'],
+    id: 'side-control', name: 'Side Control', symmetric: false,
+    advantage: 'top', atbModTop: 1.15, atbModBottom: 0.85,
+    damageModTop: 1.2, damageModBottom: 0.7,
+    topCategories: ['submission', 'transition'],
+    bottomCategories: ['escape', 'transition'],
   },
   'mount': {
-    id: 'mount', name: 'Mount', advantage: 'dominant-top',
-    atbModTop: 1.25, atbModBottom: 0.75, damageMod: 1.4,
-    pair: 'mount-bottom',
-    availableCategories: ['submission', 'transition'],
-  },
-  'mount-bottom': {
-    id: 'mount-bottom', name: 'Mount (Bottom)', advantage: 'dominant-top',
-    atbModTop: 1.25, atbModBottom: 0.75, damageMod: 0.5,
-    pair: 'mount',
-    availableCategories: ['escape'],
+    id: 'mount', name: 'Mount', symmetric: false,
+    advantage: 'dominant-top', atbModTop: 1.25, atbModBottom: 0.75,
+    damageModTop: 1.4, damageModBottom: 0.5,
+    topCategories: ['submission', 'transition'],
+    bottomCategories: ['escape'],
   },
   'back-control': {
-    id: 'back-control', name: 'Back Control', advantage: 'dominant-top',
-    atbModTop: 1.3, atbModBottom: 0.7, damageMod: 1.5,
-    pair: 'back-control-bottom',
-    availableCategories: ['submission', 'transition'],
+    id: 'back-control', name: 'Back Control', symmetric: false,
+    advantage: 'dominant-top', atbModTop: 1.3, atbModBottom: 0.7,
+    damageModTop: 1.5, damageModBottom: 0.4,
+    topCategories: ['submission', 'transition'],
+    bottomCategories: ['escape'],
   },
-  'back-control-bottom': {
-    id: 'back-control-bottom', name: 'Back Control (Bottom)', advantage: 'dominant-top',
-    atbModTop: 1.3, atbModBottom: 0.7, damageMod: 0.4,
-    pair: 'back-control',
-    availableCategories: ['escape'],
-  },
-  'turtle-top': {
-    id: 'turtle-top', name: 'Turtle (Top)', advantage: 'top',
-    atbModTop: 1.15, atbModBottom: 0.85, damageMod: 1.2,
-    pair: 'turtle-bottom',
-    availableCategories: ['submission', 'transition'],
-  },
-  'turtle-bottom': {
-    id: 'turtle-bottom', name: 'Turtle', advantage: 'top',
-    atbModTop: 1.15, atbModBottom: 0.85, damageMod: 0.6,
-    pair: 'turtle-top',
-    availableCategories: ['escape', 'transition'],
+  'turtle': {
+    id: 'turtle', name: 'Turtle', symmetric: false,
+    advantage: 'top', atbModTop: 1.15, atbModBottom: 0.85,
+    damageModTop: 1.2, damageModBottom: 0.6,
+    topCategories: ['submission', 'transition'],
+    bottomCategories: ['escape', 'transition'],
   },
   'knee-on-belly': {
-    id: 'knee-on-belly', name: 'Knee on Belly', advantage: 'top',
-    atbModTop: 1.2, atbModBottom: 0.8, damageMod: 1.3,
-    pair: 'side-control-bottom',
-    availableCategories: ['submission', 'transition'],
+    id: 'knee-on-belly', name: 'Knee on Belly', symmetric: false,
+    advantage: 'top', atbModTop: 1.2, atbModBottom: 0.8,
+    damageModTop: 1.3, damageModBottom: 0.6,
+    topCategories: ['submission', 'transition'],
+    bottomCategories: ['escape'],
   },
   'north-south': {
-    id: 'north-south', name: 'North-South', advantage: 'top',
-    atbModTop: 1.15, atbModBottom: 0.85, damageMod: 1.15,
-    pair: 'side-control-bottom',
-    availableCategories: ['submission', 'transition'],
+    id: 'north-south', name: 'North-South', symmetric: false,
+    advantage: 'top', atbModTop: 1.15, atbModBottom: 0.85,
+    damageModTop: 1.15, damageModBottom: 0.7,
+    topCategories: ['submission', 'transition'],
+    bottomCategories: ['escape'],
   },
   'leg-entanglement': {
-    id: 'leg-entanglement', name: 'Leg Entanglement', advantage: 'neutral',
-    atbModTop: 1.0, atbModBottom: 1.0, damageMod: 1.0,
-    pair: 'leg-entanglement',
-    availableCategories: ['submission', 'sweep', 'escape', 'transition'],
+    id: 'leg-entanglement', name: 'Leg Entanglement', symmetric: true,
+    advantage: 'neutral', atbModTop: 1.0, atbModBottom: 1.0,
+    damageModTop: 1.0, damageModBottom: 1.0,
+    topCategories: ['submission', 'sweep', 'escape', 'transition'],
+    bottomCategories: ['submission', 'sweep', 'escape', 'transition'],
   },
 };
 
-// Is the player "on top" in this position?
-export function isTopPosition(pos: Position): boolean {
-  return !pos.includes('bottom') && pos !== 'standing' && pos !== 'clinch' && pos !== 'leg-entanglement';
+// Get a fighter's role in the current position
+export function getRole(_position: Position, topFighter: 'player' | 'opponent' | null, who: 'player' | 'opponent'): PositionRole {
+  if (topFighter === null) return 'neutral'; // symmetric position
+  return topFighter === who ? 'top' : 'bottom';
 }
 
-// Get the paired position for the opponent
-export function getPairedPosition(pos: Position): Position {
-  return POSITIONS[pos].pair;
+// Get available categories for a fighter based on their role
+export function getCategories(position: Position, role: PositionRole): string[] {
+  const data = POSITIONS[position];
+  if (role === 'neutral') return data.topCategories; // symmetric — both get same options
+  return role === 'top' ? data.topCategories : data.bottomCategories;
 }
 
-// Get available move categories for a position
-export function getAvailableCategories(pos: Position): MoveCategory[] {
-  return POSITIONS[pos].availableCategories;
+// Get display name with role context
+export function getPositionDisplayName(position: Position, role: PositionRole): string {
+  const data = POSITIONS[position];
+  if (data.symmetric) return data.name;
+  return role === 'top' ? `${data.name} (Top)` : `${data.name} (Bottom)`;
 }

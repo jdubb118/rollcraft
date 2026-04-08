@@ -4,7 +4,7 @@ import type { BattleState } from '../engine/types';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import { createBattleState, getPlayerMoves, executeTurn } from '../battle/BattleEngine';
 import { renderBattle } from '../render/BattleRenderer';
-import { POSITIONS } from '../data/positions';
+import { getRole, getPositionDisplayName } from '../data/positions';
 import MovePanel from '../components/MovePanel';
 import { loadPlayer, loadOpponent, saveBattleResult } from '../state/saveLoad';
 
@@ -76,7 +76,8 @@ export default function BattleScreen() {
   if (!state) return <div style={{ color: '#fff', padding: 20 }}>Loading...</div>;
 
   const playerMoves = getPlayerMoves(state);
-  const posName = POSITIONS[state.playerPosition].name;
+  const playerRole = getRole(state.position, state.topFighter, 'player');
+  const posName = getPositionDisplayName(state.position, playerRole);
   const isOver = state.phase === 'battle-over';
 
   // Color-code log lines
