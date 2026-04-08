@@ -41,16 +41,13 @@ export default function OverworldScreen() {
   const inputRef = useRef({ up: false, down: false, left: false, right: false });
   const [player, setPlayer] = useState<Grappler | null>(null);
   const [dialogueNPC, setDialogueNPC] = useState<NPCState | null>(null);
-  const dialogueNPCRef = useRef<NPCState | null>(null);
   const [dialogueText, setDialogueText] = useState<string>('');
   const [menuOptions, setMenuOptions] = useState<MenuOption[] | null>(null);
   const [menuIndex, setMenuIndex] = useState(0);
-  const menuIndexRef = useRef(0);
-  const menuOptionsRef = useRef<MenuOption[] | null>(null);
-  const handleActionRef = useRef<() => void>(() => {});
-  const handleMenuSelectRef = useRef<(action: string) => void>(() => {});
-  const handleDismissRef = useRef<() => void>(() => {});
   const navigate = useNavigate();
+
+  // ── Single dispatch ref — keyboard always calls the latest version ──
+  const dispatchRef = useRef<(type: 'action' | 'select', action?: string) => void>(() => {});
 
   // Load player and init overworld
   useEffect(() => {
@@ -89,7 +86,7 @@ export default function OverworldScreen() {
     return () => { stopped = true; cancelAnimationFrame(rafId); };
   }, [player]);
 
-  // Keyboard input
+  // Keyboard input — uses dispatchRef so it always gets the latest handler
   useEffect(() => {
     const keyMap: Record<string, Direction> = {
       ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
@@ -99,22 +96,15 @@ export default function OverworldScreen() {
     const onKeyDown = (e: KeyboardEvent) => {
       const dir = keyMap[e.key];
       if (dir) {
-        // If menu is open, up/down navigates menu
         if (stateRef.current?.interactingNPC && (dir === 'up' || dir === 'down')) {
-          setMenuIndex(prev => {
-            // +1 for CANCEL option
-            const total = (menuOptionsRef.current?.length || 0) + 1;
-            const next = dir === 'up' ? (prev - 1 + total) % total : (prev + 1) % total;
-            menuIndexRef.current = next;
-            return next;
-          });
+          dispatchRef.current('action', dir === 'up' ? '__nav_up__' : '__nav_down__');
           return;
         }
         inputRef.current[dir] = true;
       }
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        handleActionRef.current();
+        dispatchRef.current('action');
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -127,59 +117,139 @@ export default function OverworldScreen() {
     return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); };
   }, []);
 
-  // Handle D-pad input
-  const handleDirection = useCallback((dir: Direction | null) => {
-    inputRef.current = { up: false, down: false, left: false, right: false };
-    if (dir) inputRef.current[dir] = true;
-  }, []);
+  // ── All interaction logic — plain functions, no useCallback ──
+  // These are recreated every render, which is fine. The keyboard
+  // listener accesses them through dispatchRef which is synced below.
 
-  // Handle action button (interact with NPC)
-  const handleAction = useCallback(() => {
+  function dismiss() {
+    if (stateRef.current) stateRef.current.interactingNPC = null;
+    setDialogueNPC(null);
+    setDialogueText('');
+    setMenuOptions(null);
+    setMenuIndex(0);
+  }
+
+  function showMenu(text: string, options: MenuOption[]) {
+    setDialogueText(text);
+    setMenuOptions(options);
+    setMenuIndex(0);
+  }
+
+  function showText(text: string) {
+    setDialogueText(text);
+    setMenuOptions(null);
+    setMenuIndex(0);
+  }
+
+  function handleMenuAction(action: string) {
+    const npc = dialogueNPC;
+    if (!npc || !stateRef.current || !player) return;
+
+    if (action === 'roll') {
+      const opponent = npcToGrappler(npc);
+      saveOpponent(opponent);
+      navigate('/battle');
+
+    } else if (action === 'learn') {
+      const teachable = npc.def.teachableMoves || [];
+      const cost = npc.def.teachCost || 100;
+      const prog = loadProgression();
+      const alreadyLearned = player.learnedMoves || [];
+
+      const moveOptions: MenuOption[] = teachable.map(moveId => {
+        const move = getMove(moveId);
+        const already = alreadyLearned.includes(moveId);
+        const cantAfford = prog.money < cost;
+        return {
+          label: move
+            ? `${move.name} (${move.category.toUpperCase()}) — $${cost}${already ? ' ✓ LEARNED' : ''}`
+            : moveId,
+          action: `learn-move:${moveId}`,
+          disabled: already || cantAfford,
+        };
+      });
+
+      showMenu(
+        `${npc.def.dialogue.teach || 'I can teach you...'}\n\nYou have $${prog.money} Mat Bucks.`,
+        moveOptions,
+      );
+
+    } else if (action.startsWith('learn-move:')) {
+      const moveId = action.replace('learn-move:', '');
+      const move = getMove(moveId);
+      const cost = npc.def.teachCost || 100;
+      if (!move) return;
+
+      const paid = spendMoney(cost);
+      if (!paid) {
+        showText("You don't have enough Mat Bucks.");
+        return;
+      }
+
+      if (!player.learnedMoves) player.learnedMoves = [...player.moves];
+      if (!player.learnedMoves.includes(moveId)) {
+        player.learnedMoves.push(moveId);
+      }
+
+      const maxSlots = BELT_MOVE_SLOTS[player.belt];
+      let equipped = false;
+      if (player.moves.length < maxSlots && !player.moves.includes(moveId)) {
+        player.moves.push(moveId);
+        equipped = true;
+      }
+
+      savePlayer(player);
+      setPlayer({ ...player });
+
+      showText(
+        `NEW MOVE LEARNED!\n\n` +
+        `${move.name.toUpperCase()}\n` +
+        `${move.category.toUpperCase()} | PWR:${move.power} ACC:${move.accuracy} STA:${move.staminaCost}\n\n` +
+        `"${move.description}"\n\n` +
+        `-$${cost} Mat Bucks` +
+        (equipped ? '\n\nMove equipped!' : '\n\nSlots full. Manage moves from MENU.')
+      );
+
+    } else if (action === 'promote') {
+      navigate('/promotion');
+
+    } else if (action === 'exam') {
+      showText("You need more mat time before your next belt. Keep training.");
+    }
+  }
+
+  function handleAction() {
     const state = stateRef.current;
     if (!state) return;
 
-    // If menu is open, select the highlighted option
-    if (state.interactingNPC && menuOptionsRef.current && menuOptionsRef.current.length > 0) {
-      const idx = menuIndexRef.current;
-      const opts = menuOptionsRef.current;
-      if (idx < opts.length) {
-        // Select a menu option
-        const opt = opts[idx];
-        if (!opt.disabled) {
-          handleMenuSelectRef.current(opt.action);
-        }
+    // Menu open → select current item
+    if (state.interactingNPC && menuOptions && menuOptions.length > 0) {
+      if (menuIndex < menuOptions.length) {
+        const opt = menuOptions[menuIndex];
+        if (!opt.disabled) handleMenuAction(opt.action);
       } else {
-        // CANCEL selected
-        handleDismissRef.current();
+        dismiss();
       }
       return;
     }
 
-    // If in dialogue with no menu, dismiss
+    // Dialogue with no menu → dismiss
     if (state.interactingNPC) {
-      state.interactingNPC = null;
-      setDialogueNPC(null);
-      dialogueNPCRef.current = null;
-      setDialogueText('');
-      setMenuOptions(null);
-      menuOptionsRef.current = null;
+      dismiss();
       return;
     }
 
-    // Check for facing NPC
+    // Not in dialogue → try to interact with facing NPC
     const npc = getFacingNPC(state);
     if (!npc) return;
 
     state.interactingNPC = npc.def.id;
     setDialogueNPC(npc);
-    dialogueNPCRef.current = npc;
-    // Use coach name for professor NPC
+
     const greeting = npc.def.role === 'professor' && player?.coachName
       ? npc.def.dialogue.greeting.replace('Prof. Helio', player.coachName)
       : npc.def.dialogue.greeting;
-    setDialogueText(greeting);
 
-    // Build menu based on role
     const options: MenuOption[] = [];
     if (npc.def.role === 'training-partner') {
       options.push({ label: "LET'S ROLL", action: 'roll' });
@@ -197,114 +267,34 @@ export default function OverworldScreen() {
         options.push({ label: 'BELT PROMOTION', action: 'exam', disabled: true });
       }
     }
-    setMenuOptions(options);
-    menuOptionsRef.current = options;
-    setMenuIndex(0);
-    menuIndexRef.current = 0;
-  }, []);
 
-  // Keep refs in sync so keyboard listener always calls latest version
-  handleActionRef.current = handleAction;
+    showMenu(greeting, options);
+  }
 
-  // Handle menu selection — uses ref to avoid stale closure
-  const handleMenuSelect = useCallback((action: string) => {
-    const npc = dialogueNPCRef.current;
-    if (!npc || !stateRef.current) return;
-
-    if (action === 'roll') {
-      const opponent = npcToGrappler(npc);
-      saveOpponent(opponent);
-      navigate('/battle');
-    } else if (action === 'learn') {
-      // Show teachable moves as menu options
-      const teachable = npc.def.teachableMoves || [];
-      const cost = npc.def.teachCost || 100;
-      const prog = loadProgression();
-      const alreadyLearned = player?.learnedMoves || [];
-
-      const moveOptions: MenuOption[] = teachable.map(moveId => {
-        const move = getMove(moveId);
-        const already = alreadyLearned.includes(moveId);
-        const cantAfford = prog.money < cost;
-        const label = move
-          ? `${move.name} (${move.category.toUpperCase()}) — ${cost}$${already ? ' ✓ LEARNED' : ''}`
-          : moveId;
-        return {
-          label,
-          action: `learn-move:${moveId}`,
-          disabled: already || cantAfford,
-        };
-      });
-
-      setDialogueText(`${npc.def.dialogue.teach || 'I can teach you...'}\n\nYou have ${prog.money} Mat Bucks.`);
-      setMenuOptions(moveOptions);
-      menuOptionsRef.current = moveOptions;
-      setMenuIndex(0);
-      menuIndexRef.current = 0;
-    } else if (action === 'promote') {
-      navigate('/promotion');
-    } else if (action.startsWith('learn-move:')) {
-      const moveId = action.replace('learn-move:', '');
-      const move = getMove(moveId);
-      const cost = npc.def.teachCost || 100;
-
-      if (!player || !move) return;
-
-      // Pay for the move
-      const paid = spendMoney(cost);
-      if (!paid) {
-        setDialogueText("You don't have enough Mat Bucks.");
-        setMenuOptions(null);
-        menuOptionsRef.current = null;
-        return;
+  // ── Sync the dispatch ref every render ──
+  dispatchRef.current = (type, extra) => {
+    if (type === 'action') {
+      if (extra === '__nav_up__') {
+        setMenuIndex(prev => {
+          const total = (menuOptions?.length || 0) + 1;
+          return (prev - 1 + total) % total;
+        });
+      } else if (extra === '__nav_down__') {
+        setMenuIndex(prev => {
+          const total = (menuOptions?.length || 0) + 1;
+          return (prev + 1) % total;
+        });
+      } else {
+        handleAction();
       }
-
-      // Add to learned pool
-      if (!player.learnedMoves) player.learnedMoves = [...player.moves];
-      if (!player.learnedMoves.includes(moveId)) {
-        player.learnedMoves.push(moveId);
-      }
-
-      // Auto-equip if there's an open slot
-      const maxSlots = BELT_MOVE_SLOTS[player.belt];
-      if (player.moves.length < maxSlots && !player.moves.includes(moveId)) {
-        player.moves.push(moveId);
-      }
-
-      savePlayer(player);
-      setPlayer({ ...player });
-
-      // Show unlock message
-      setDialogueText(
-        `NEW MOVE LEARNED!\n\n${move.name.toUpperCase()}\n${move.category.toUpperCase()} | PWR:${move.power} ACC:${move.accuracy} STA:${move.staminaCost}\n\n"${move.description}"\n\n-${cost} Mat Bucks`
-        + (player.moves.includes(moveId) ? '\n\nMove equipped!' : `\n\nMove added to your pool. Manage moves from MENU.`)
-      );
-      setMenuOptions(null);
-      menuOptionsRef.current = null;
-    } else if (action === 'exam') {
-      setDialogueText("You need more mat time before your next belt. Keep training.");
-      setMenuOptions(null);
-      menuOptionsRef.current = null;
     }
-  }, [navigate]);
+  };
 
-  // Dismiss dialogue
-  const handleDismiss = useCallback(() => {
-    if (stateRef.current) {
-      stateRef.current.interactingNPC = null;
-    }
-    setDialogueNPC(null);
-    dialogueNPCRef.current = null;
-    setDialogueText('');
-    setMenuOptions(null);
-    menuOptionsRef.current = null;
-    setMenuIndex(0);
-    menuIndexRef.current = 0;
+  // D-pad direction handler (stable — no state deps)
+  const handleDirection = useCallback((dir: Direction | null) => {
+    inputRef.current = { up: false, down: false, left: false, right: false };
+    if (dir) inputRef.current[dir] = true;
   }, []);
-
-  // Keep all callback refs in sync
-  handleMenuSelectRef.current = handleMenuSelect;
-  handleDismissRef.current = handleDismiss;
 
   if (!player) return <div style={{ color: '#fff', padding: 20 }}>Loading...</div>;
 
@@ -372,13 +362,13 @@ export default function OverworldScreen() {
           text={dialogueText}
           menuOptions={menuOptions}
           selectedIndex={menuIndex}
-          onMenuSelect={handleMenuSelect}
-          onDismiss={handleDismiss}
+          onMenuSelect={(action) => handleMenuAction(action)}
+          onDismiss={() => dismiss()}
         />
       )}
 
       {/* D-pad */}
-      <DPad onDirection={handleDirection} onAction={handleAction} />
+      <DPad onDirection={handleDirection} onAction={() => handleAction()} />
 
       {/* Hint text */}
       {!dialogueNPC && (
