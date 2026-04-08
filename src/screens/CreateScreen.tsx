@@ -138,10 +138,10 @@ export default function CreateScreen() {
   return (
     <div
       onClick={phase === 'intro' || phase === 'narrative' ? handleTap : undefined}
+      className="game-shell"
       style={{
-        width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
         justifyContent: 'center', alignItems: 'center',
-        background: '#0a0a14', padding: 24, gap: 20, overflow: 'hidden',
+        padding: 24, gap: 20,
       }}
     >
       {/* ═══ NAME PHASE ═══ */}

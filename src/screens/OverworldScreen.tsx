@@ -299,28 +299,24 @@ export default function OverworldScreen() {
   if (!player) return <div style={{ color: '#fff', padding: 20 }}>Loading...</div>;
 
   return (
-    <div style={{
-      width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
-      background: '#0a0a14', overflow: 'hidden', position: 'relative',
-    }}>
+    <div className="game-shell">
       {/* Header bar */}
       <div style={{
-        padding: '6px 12px', display: 'flex', justifyContent: 'space-between',
+        padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', background: '#0d0d1a', borderBottom: '1px solid #222',
       }}>
-        <span style={{ fontSize: '0.4rem', color: '#ffd700' }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: '#ffd700' }}>
           {player.name.toUpperCase()}
         </span>
-        <span style={{ fontSize: '0.35rem', color: '#888' }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
           Lv{getLevel(player)} | {player.xp} XP
         </span>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={() => navigate('/world')}
             style={{
-              padding: '4px 8px', background: '#1a1a2e', color: '#3498db',
-              fontSize: '0.3rem', border: '1px solid #3498db',
-              fontFamily: "'Press Start 2P', monospace",
+              padding: '6px 10px', background: '#1a1a2e', color: '#3498db',
+              fontSize: 'var(--fs-xs)', border: '1px solid #3498db',
             }}
           >
             MAP
@@ -328,9 +324,8 @@ export default function OverworldScreen() {
           <button
             onClick={() => navigate('/stats')}
             style={{
-              padding: '4px 8px', background: '#1a1a2e', color: '#ffd700',
-              fontSize: '0.3rem', border: '1px solid #ffd700',
-              fontFamily: "'Press Start 2P', monospace",
+              padding: '6px 10px', background: '#1a1a2e', color: '#ffd700',
+              fontSize: 'var(--fs-xs)', border: '1px solid #ffd700',
             }}
           >
             MENU
@@ -373,10 +368,10 @@ export default function OverworldScreen() {
       {/* Hint text */}
       {!dialogueNPC && (
         <div style={{
-          position: 'fixed', bottom: 170, left: 0, right: 0,
-          textAlign: 'center', fontSize: '0.3rem', color: '#444',
+          position: 'absolute', bottom: 8, left: 0, right: 0,
+          textAlign: 'center', fontSize: 'var(--fs-xs)', color: '#444',
         }}>
-          WALK TO AN NPC AND PRESS A TO INTERACT
+          WALK TO AN NPC AND PRESS A / SPACE TO INTERACT
         </div>
       )}
     </div>

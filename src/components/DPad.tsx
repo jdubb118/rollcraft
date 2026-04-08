@@ -7,14 +7,15 @@ interface DPadProps {
 }
 
 // Invisible joystick — touch anywhere on the left half to move,
-// direction based on drag angle from initial touch point
+// direction based on drag angle from initial touch point.
+// Hidden on desktop (keyboard controls available).
 export default function DPad({ onDirection, onAction }: DPadProps) {
   const originRef = useRef<{ x: number; y: number } | null>(null);
   const activeDir = useRef<Direction | null>(null);
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
 
-  const DEAD_ZONE = 15; // pixels before registering direction
+  const DEAD_ZONE = 15;
 
   const getDirection = useCallback((dx: number, dy: number): Direction | null => {
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -30,7 +31,6 @@ export default function DPad({ onDirection, onAction }: DPadProps) {
     originRef.current = { x: e.clientX, y: e.clientY };
     activeDir.current = null;
 
-    // Show joystick indicator
     if (joystickRef.current) {
       joystickRef.current.style.opacity = '1';
       joystickRef.current.style.left = `${e.clientX - 40}px`;
@@ -52,7 +52,6 @@ export default function DPad({ onDirection, onAction }: DPadProps) {
       onDirection(dir);
     }
 
-    // Move knob indicator (clamped)
     if (knobRef.current) {
       const maxDist = 25;
       const dist = Math.min(Math.sqrt(dx * dx + dy * dy), maxDist);
@@ -73,6 +72,10 @@ export default function DPad({ onDirection, onAction }: DPadProps) {
     }
   }, [onDirection]);
 
+  // Check if touch device
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!isTouchDevice) return null; // Hide on desktop — use keyboard
+
   return (
     <>
       {/* Invisible touch zone — left 60% of screen */}
@@ -88,7 +91,7 @@ export default function DPad({ onDirection, onAction }: DPadProps) {
         onPointerLeave={handlePointerUp}
       />
 
-      {/* Joystick visual indicator (appears on touch) */}
+      {/* Joystick visual indicator */}
       <div
         ref={joystickRef}
         style={{
@@ -115,8 +118,8 @@ export default function DPad({ onDirection, onAction }: DPadProps) {
         style={{
           position: 'fixed', bottom: 40, right: 30,
           width: 56, height: 56, borderRadius: '50%',
-          background: '#ffd700', color: '#000', fontSize: '0.6rem',
-          fontFamily: "'Press Start 2P', monospace", border: '3px solid #b8960f',
+          background: '#ffd700', color: '#000', fontSize: 16,
+          border: '3px solid #b8960f',
           zIndex: 100, touchAction: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}

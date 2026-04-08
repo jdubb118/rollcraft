@@ -53,8 +53,7 @@ export default function MovePanel({ moves, onSelect, disabled, currentStamina }:
           style={{
             width: '100%', padding: '8px', marginTop: 2,
             background: '#1a1a0e', border: '2px solid #8b7500',
-            color: '#ffd700', fontSize: '0.35rem',
-            fontFamily: "'Press Start 2P', monospace",
+            color: '#ffd700', fontSize: 'var(--fs-xs)',
             opacity: disabled ? 0.5 : 0.8,
           }}
         >

@@ -18,6 +18,41 @@ html, body, #root {
   -webkit-user-select: none;
 }
 
+/* Game container — centers and caps width on desktop */
+.game-shell {
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a14;
+}
+
+/* On wide screens, add a frame effect */
+@media (min-width: 600px) {
+  html, body, #root {
+    background: #050510;
+  }
+  .game-shell {
+    border-left: 2px solid #1a1a2e;
+    border-right: 2px solid #1a1a2e;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+  }
+}
+
+/* Responsive font scale */
+:root {
+  --fs-xs: 8px;
+  --fs-sm: 10px;
+  --fs-md: 12px;
+  --fs-lg: 14px;
+  --fs-xl: 18px;
+  --fs-xxl: 24px;
+}
+
 button {
   font-family: 'Press Start 2P', monospace;
   border: none;

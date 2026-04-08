@@ -57,10 +57,7 @@ export default function WorldMapScreen() {
   };
 
   return (
-    <div style={{
-      width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
-      background: '#0a0a14', overflow: 'hidden',
-    }}>
+    <div className="game-shell">
       {/* Header */}
       <div style={{
         padding: '8px 12px', display: 'flex', justifyContent: 'space-between',

@@ -12,13 +12,13 @@ interface DialogueBoxProps {
 export default function DialogueBox({ speakerName, text, menuOptions, selectedIndex = 0, onMenuSelect, onDismiss }: DialogueBoxProps) {
   return (
     <div style={{
-      position: 'fixed', bottom: 160, left: 8, right: 8,
+      position: 'absolute', bottom: 12, left: 8, right: 8,
       background: '#0a0a14', border: '3px solid #ffd700',
-      padding: '10px 14px', zIndex: 50, maxWidth: 360, margin: '0 auto',
+      padding: '12px 16px', zIndex: 50,
     }}>
       {/* Speaker name */}
       <div style={{
-        fontSize: '0.45rem', color: '#ffd700', marginBottom: 6,
+        fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8,
         textTransform: 'uppercase',
       }}>
         {speakerName}
@@ -26,15 +26,19 @@ export default function DialogueBox({ speakerName, text, menuOptions, selectedIn
 
       {/* Dialogue text */}
       <div style={{
-        fontSize: '0.38rem', color: '#e0e0e0', lineHeight: 1.8,
+        fontSize: 'var(--fs-xs)', color: '#e0e0e0', lineHeight: 1.8,
         marginBottom: menuOptions ? 10 : 0,
+        whiteSpace: 'pre-line',
       }}>
         {text}
       </div>
 
       {/* Menu options */}
       {menuOptions && menuOptions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10,
+          maxHeight: 200, overflowY: 'auto',
+        }} className="no-scrollbar">
           {menuOptions.map((opt, i) => {
             const isSelected = i === selectedIndex;
             return (
@@ -43,12 +47,11 @@ export default function DialogueBox({ speakerName, text, menuOptions, selectedIn
                 onClick={() => onMenuSelect(opt.action)}
                 disabled={opt.disabled}
                 style={{
-                  padding: '6px 10px',
+                  padding: '8px 12px',
                   background: opt.disabled ? '#111' : isSelected ? '#2a2a4e' : '#1a1a2e',
                   border: `2px solid ${opt.disabled ? '#333' : isSelected ? '#fff' : '#ffd700'}`,
                   color: opt.disabled ? '#555' : '#ffd700',
-                  fontSize: '0.38rem', textAlign: 'left',
-                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: 'var(--fs-xs)', textAlign: 'left',
                 }}
               >
                 {isSelected ? '► ' : '  '}{opt.label}
@@ -58,12 +61,11 @@ export default function DialogueBox({ speakerName, text, menuOptions, selectedIn
           <button
             onClick={onDismiss}
             style={{
-              padding: '6px 10px',
+              padding: '8px 12px',
               background: selectedIndex === menuOptions.length ? '#1a1a2e' : '#111',
               border: `2px solid ${selectedIndex === menuOptions.length ? '#fff' : '#444'}`,
               color: selectedIndex === menuOptions.length ? '#ccc' : '#888',
-              fontSize: '0.35rem', textAlign: 'left',
-              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 'var(--fs-xs)', textAlign: 'left',
             }}
           >
             {selectedIndex === menuOptions.length ? '► ' : '  '}CANCEL
@@ -71,14 +73,13 @@ export default function DialogueBox({ speakerName, text, menuOptions, selectedIn
         </div>
       )}
 
-      {/* Tap to dismiss (no menu) */}
+      {/* Continue button (no menu) */}
       {(!menuOptions || menuOptions.length === 0) && (
         <button
           onClick={onDismiss}
           style={{
-            marginTop: 8, padding: '8px 14px', fontSize: '0.35rem', color: '#888',
-            background: '#111', border: '1px solid #444', width: '100%',
-            fontFamily: "'Press Start 2P', monospace", cursor: 'pointer',
+            marginTop: 10, padding: '10px 14px', fontSize: 'var(--fs-xs)', color: '#888',
+            background: '#111', border: '1px solid #444', width: '100%', cursor: 'pointer',
           }}
         >
           ► CONTINUE

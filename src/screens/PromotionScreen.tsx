@@ -104,10 +104,10 @@ export default function PromotionScreen() {
   return (
     <div
       onClick={handleTap}
+      className="game-shell"
       style={{
-        width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
         justifyContent: 'center', alignItems: 'center',
-        background: '#0a0a14', padding: 24, gap: 20, overflow: 'hidden',
+        padding: 24, gap: 20,
       }}
     >
       {/* Narrative phase */}

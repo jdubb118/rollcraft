@@ -58,9 +58,8 @@ export default function StatsScreen() {
 
   return (
     <div style={{
-      width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
-      background: '#0a0a14', overflow: 'auto',
-    }} className="no-scrollbar">
+      overflow: 'auto',
+    }} className="game-shell no-scrollbar">
       {/* Header */}
       <div style={{
         padding: '12px 16px', background: '#0d0d1a',

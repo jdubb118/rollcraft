@@ -59,20 +59,18 @@ export default function BattleScreen() {
         ? 100 + Math.floor(newState.turn * 2)
         : isDraw ? 50 : Math.floor(30 + newState.turn);
 
-      setTimeout(() => {
-        saveBattleResult({
-          winner: newState.winner ?? 'draw',
-          method: newState.winMethod ?? 'points',
-          xpGained,
-          turns: newState.turn,
-          playerName: newState.player.grappler.name,
-          opponentName: newState.opponent.grappler.name,
-          opponentStyle: newState.opponent.grappler.style,
-          playerPoints: newState.playerPoints,
-          opponentPoints: newState.opponentPoints,
-        });
-        navigate('/results');
-      }, 2500);
+      // Save result but DON'T auto-navigate — let player review the log
+      saveBattleResult({
+        winner: newState.winner ?? 'draw',
+        method: newState.winMethod ?? 'points',
+        xpGained,
+        turns: newState.turn,
+        playerName: newState.player.grappler.name,
+        opponentName: newState.opponent.grappler.name,
+        opponentStyle: newState.opponent.grappler.style,
+        playerPoints: newState.playerPoints,
+        opponentPoints: newState.opponentPoints,
+      });
     }
   }, [state, navigate]);
 
@@ -122,36 +120,33 @@ export default function BattleScreen() {
   const initiativeColor = state.firstActor === 'opponent' ? '#ef4444' : '#22c55e';
 
   return (
-    <div style={{
-      width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column',
-      background: '#0a0a14', overflow: 'hidden',
-    }}>
+    <div className="game-shell">
       {/* Scoreboard */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '4px 10px', background: '#0d0d1a', borderBottom: '1px solid #222',
-        fontSize: '0.35rem',
+        padding: '8px 12px', background: '#0d0d1a', borderBottom: '1px solid #222',
+        fontSize: 'var(--fs-sm)',
       }}>
-        <div style={{ color: '#22c55e', textAlign: 'left' }}>
+        <div style={{ color: '#22c55e', textAlign: 'left', minWidth: 80 }}>
           <div>{playerName}</div>
-          <div style={{ fontSize: '0.5rem', fontWeight: 'bold' }}>{state.playerPoints}</div>
-          <div style={{ color: '#666' }}>adv: {state.playerAdvantages}</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 'bold' }}>{state.playerPoints}</div>
+          <div style={{ color: '#666', fontSize: 'var(--fs-xs)' }}>adv: {state.playerAdvantages}</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#888', fontSize: '0.3rem' }}>TURNS LEFT</div>
+          <div style={{ color: '#888', fontSize: 'var(--fs-xs)' }}>TURNS LEFT</div>
           <div style={{
             color: turnsLeft <= 3 ? '#ef4444' : '#ffd700',
-            fontSize: '0.6rem',
+            fontSize: 'var(--fs-xxl)',
             animation: turnsLeft <= 3 ? 'pulse 0.5s infinite' : 'none',
           }}>
             {turnsLeft}
           </div>
-          <div style={{ color: initiativeColor, fontSize: '0.25rem' }}>{initiativeText}</div>
+          <div style={{ color: initiativeColor, fontSize: 'var(--fs-xs)' }}>{initiativeText}</div>
         </div>
-        <div style={{ color: '#ef4444', textAlign: 'right' }}>
+        <div style={{ color: '#ef4444', textAlign: 'right', minWidth: 80 }}>
           <div>{opponentName}</div>
-          <div style={{ fontSize: '0.5rem', fontWeight: 'bold' }}>{state.opponentPoints}</div>
-          <div style={{ color: '#666' }}>adv: {state.opponentAdvantages}</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 'bold' }}>{state.opponentPoints}</div>
+          <div style={{ color: '#666', fontSize: 'var(--fs-xs)' }}>adv: {state.opponentAdvantages}</div>
         </div>
       </div>
 
@@ -184,12 +179,12 @@ export default function BattleScreen() {
           ref={logRef}
           className="no-scrollbar"
           style={{
-            fontSize: '0.38rem', padding: '2px 10px',
-            maxHeight: 100, overflowY: 'auto', lineHeight: 1.7,
+            fontSize: 'var(--fs-xs)', padding: '4px 12px',
+            maxHeight: isOver ? 250 : 120, overflowY: 'auto', lineHeight: 1.8,
             background: '#0d0d1a', borderTop: '1px solid #222', borderBottom: '1px solid #222',
           }}
         >
-          {state.log.slice(-8).flatMap((line, i) =>
+          {(isOver ? state.log : state.log.slice(-8)).flatMap((line, i) =>
             line.split('\n').map((subline, j) => (
               <div key={`${i}-${j}`} style={{ color: getLogColor(subline) }}>
                 {subline}
@@ -200,8 +195,8 @@ export default function BattleScreen() {
 
         {/* Position indicator */}
         <div style={{
-          textAlign: 'center', fontSize: '0.5rem', color: '#ffd700',
-          padding: '2px 0',
+          textAlign: 'center', fontSize: 'var(--fs-md)', color: '#ffd700',
+          padding: '4px 0',
         }}>
           {posName.toUpperCase()}
         </div>
@@ -217,17 +212,28 @@ export default function BattleScreen() {
         )}
 
         {isOver && (
-          <div style={{
-            textAlign: 'center', padding: 16, fontSize: '0.7rem',
-            color: state.winner === 'player' ? '#22c55e' : state.winner === null ? '#888' : '#ef4444',
-            animation: 'pulse 1s infinite',
-          }}>
-            {state.winner === 'player' ? 'YOU WIN!' : state.winner === null ? 'DRAW' : 'YOU LOSE!'}
-            <div style={{ fontSize: '0.4rem', color: '#888', marginTop: 8 }}>
+          <div style={{ textAlign: 'center', padding: 16 }}>
+            <div style={{
+              fontSize: 'var(--fs-xxl)',
+              color: state.winner === 'player' ? '#22c55e' : state.winner === null ? '#888' : '#ef4444',
+              animation: 'pulse 1s infinite',
+            }}>
+              {state.winner === 'player' ? 'YOU WIN!' : state.winner === null ? 'DRAW' : 'YOU LOSE!'}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: '#888', marginTop: 4 }}>
               {state.winMethod === 'submission' ? 'by SUBMISSION' :
                state.winMethod === 'points' ? 'by POINTS' :
                state.winMethod === 'advantages' ? 'by ADVANTAGES' : ''}
             </div>
+            <button
+              onClick={() => navigate('/results')}
+              style={{
+                marginTop: 12, padding: '10px 24px', background: '#1a1a2e',
+                color: '#ffd700', fontSize: 'var(--fs-sm)', border: '2px solid #ffd700',
+              }}
+            >
+              CONTINUE
+            </button>
           </div>
         )}
       </div>

@@ -26,18 +26,18 @@ export default function MoveButton({ move, onSelect, disabled, canAfford }: Move
           : `linear-gradient(135deg, ${color}33, ${color}11)`,
         border: `2px solid ${color}`,
         color: isStall ? '#ffd700' : '#fff',
-        fontSize: '0.5rem',
+        fontSize: 'var(--fs-sm)',
         lineHeight: 1.4,
         textAlign: 'left',
         opacity,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        gap: 2,
+        gap: 3,
       }}
     >
-      <span style={{ fontSize: '0.55rem' }}>{isStall ? 'STALL' : move.name}</span>
-      <span style={{ fontSize: '0.4rem', color: '#aaa' }}>
+      <span style={{ fontSize: 'var(--fs-sm)' }}>{isStall ? 'STALL' : move.name}</span>
+      <span style={{ fontSize: 'var(--fs-xs)', color: '#aaa' }}>
         {isStall ? 'RECOVER STAMINA' : `${move.category.toUpperCase()} | ${move.staminaCost} STA`}
       </span>
     </button>
