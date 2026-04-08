@@ -70,13 +70,13 @@ export default function StatsScreen() {
           onClick={() => navigate('/overworld')}
           style={{
             padding: '6px 12px', background: '#1a1a2e', color: '#888',
-            fontSize: '0.4rem', border: '1px solid #444',
+            fontSize: 'var(--fs-sm)', border: '1px solid #444',
           }}
         >
           BACK
         </button>
-        <span style={{ fontSize: '0.5rem', color: '#ffd700' }}>FIGHTER PROFILE</span>
-        <div style={{ fontSize: '0.3rem', color: '#22c55e' }}>${prog.money}</div>
+        <span style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }}>FIGHTER PROFILE</span>
+        <div style={{ fontSize: 'var(--fs-xs)', color: '#22c55e' }}>${prog.money}</div>
       </div>
 
       {/* Tabs */}
@@ -84,7 +84,7 @@ export default function StatsScreen() {
         {(['stats', 'moves'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             flex: 1, padding: '8px', background: tab === t ? '#1a1a2e' : '#0a0a14',
-            color: tab === t ? '#ffd700' : '#555', fontSize: '0.4rem',
+            color: tab === t ? '#ffd700' : '#555', fontSize: 'var(--fs-sm)',
             border: 'none', borderBottom: tab === t ? '2px solid #ffd700' : '2px solid transparent',
           }}>
             {t.toUpperCase()}
@@ -97,19 +97,19 @@ export default function StatsScreen() {
           <>
             {/* Name + Belt */}
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.7rem', color: '#fff', marginBottom: 4 }}>
+              <div style={{ fontSize: 'var(--fs-xl)', color: '#fff', marginBottom: 4 }}>
                 {player.name.toUpperCase()}
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center' }}>
                 <span style={{
-                  fontSize: '0.45rem', color: BELT_COLORS[player.belt],
+                  fontSize: 'var(--fs-sm)', color: BELT_COLORS[player.belt],
                   border: `1px solid ${BELT_COLORS[player.belt]}`,
                   padding: '2px 8px',
                 }}>
                   {player.belt.toUpperCase()} BELT
                 </span>
-                <span style={{ fontSize: '0.45rem', color: '#aaa' }}>LV {level}</span>
-                <span style={{ fontSize: '0.4rem', color: styleColor }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: '#aaa' }}>LV {level}</span>
+                <span style={{ fontSize: 'var(--fs-sm)', color: styleColor }}>
                   {STYLE_NAMES[player.style]}
                 </span>
               </div>
@@ -119,7 +119,7 @@ export default function StatsScreen() {
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
               <div style={{
                 display: 'flex', justifyContent: 'space-between',
-                fontSize: '0.35rem', color: '#888', marginBottom: 6,
+                fontSize: 'var(--fs-xs)', color: '#888', marginBottom: 6,
               }}>
                 <span>{player.xp} XP</span>
                 <span>{nextBelt ? `${nextThreshold} for ${nextBelt.toUpperCase()}` : 'MAX RANK'}</span>
@@ -133,7 +133,7 @@ export default function StatsScreen() {
               </div>
               {nextBelt && player.xp >= nextThreshold && (
                 <div style={{
-                  fontSize: '0.35rem', color: '#ffd700', marginTop: 6, textAlign: 'center',
+                  fontSize: 'var(--fs-xs)', color: '#ffd700', marginTop: 6, textAlign: 'center',
                 }} className="blink">
                   READY FOR PROMOTION! VISIT YOUR COACH
                 </div>
@@ -142,7 +142,7 @@ export default function StatsScreen() {
 
             {/* Stats */}
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
-              <div style={{ fontSize: '0.4rem', color: '#ffd700', marginBottom: 8 }}>STATS</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8 }}>STATS</div>
               {([
                 ['STR', stats.str, '#e74c3c'],
                 ['TEC', stats.tec, '#3498db'],
@@ -154,26 +154,26 @@ export default function StatsScreen() {
                 <div key={label} style={{
                   display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4,
                 }}>
-                  <span style={{ fontSize: '0.35rem', color: '#888', width: 28 }}>{label}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: '#888', width: 28 }}>{label}</span>
                   <div style={{ flex: 1, height: 8, background: '#222' }}>
                     <div style={{
                       width: `${Math.min(100, (value / 50) * 100)}%`,
                       height: '100%', background: color,
                     }} />
                   </div>
-                  <span style={{ fontSize: '0.35rem', color: '#aaa', width: 20, textAlign: 'right' }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: '#aaa', width: 20, textAlign: 'right' }}>
                     {value}
                   </span>
                 </div>
               ))}
-              <div style={{ fontSize: '0.3rem', color: '#555', marginTop: 4 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 4 }}>
                 HP: {stats.maxHp}
               </div>
             </div>
 
             {/* Belt progression */}
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
-              <div style={{ fontSize: '0.4rem', color: '#ffd700', marginBottom: 8 }}>BELT PROGRESSION</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8 }}>BELT PROGRESSION</div>
               <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                 {BELTS.map(belt => {
                   const isCurrentOrPast = BELTS.indexOf(belt) <= BELTS.indexOf(player.belt);
@@ -187,15 +187,15 @@ export default function StatsScreen() {
                   );
                 })}
               </div>
-              <div style={{ fontSize: '0.3rem', color: '#666', textAlign: 'center', marginTop: 6 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: '#666', textAlign: 'center', marginTop: 6 }}>
                 Move slots: {moveSlots} | Next unlock: {nextBelt ? BELT_MOVE_SLOTS[nextBelt] : 'MAX'}
               </div>
             </div>
 
             {/* Record */}
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
-              <div style={{ fontSize: '0.4rem', color: '#ffd700', marginBottom: 8 }}>RECORD</div>
-              <div style={{ fontSize: '0.35rem', color: '#aaa', display: 'flex', justifyContent: 'space-around' }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8 }}>RECORD</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: '#aaa', display: 'flex', justifyContent: 'space-around' }}>
                 <span>Wins: {prog.totalWins}</span>
                 <span>Losses: {prog.totalLosses}</span>
                 <span>Mat Bucks: ${prog.money}</span>
@@ -209,7 +209,7 @@ export default function StatsScreen() {
             {/* Equipped moves */}
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
               <div style={{
-                fontSize: '0.4rem', color: '#ffd700', marginBottom: 8,
+                fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8,
                 display: 'flex', justifyContent: 'space-between',
               }}>
                 <span>EQUIPPED</span>
@@ -227,11 +227,11 @@ export default function StatsScreen() {
                     padding: '6px 4px', borderBottom: '1px solid #1a1a1a',
                   }}>
                     <div>
-                      <span style={{ fontSize: '0.38rem', color: '#ddd' }}>{move.name}</span>
-                      <span style={{ fontSize: '0.28rem', color: mColor, marginLeft: 6 }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: '#ddd' }}>{move.name}</span>
+                      <span style={{ fontSize: 7, color: mColor, marginLeft: 6 }}>
                         {move.category.toUpperCase()}
                       </span>
-                      <div style={{ fontSize: '0.25rem', color: '#666', marginTop: 2 }}>
+                      <div style={{ fontSize: 7, color: '#666', marginTop: 2 }}>
                         PWR:{move.power} ACC:{move.accuracy} STA:{move.staminaCost}
                       </div>
                     </div>
@@ -241,7 +241,7 @@ export default function StatsScreen() {
                       style={{
                         padding: '4px 8px', background: '#2a1a1a',
                         border: '1px solid #ef4444', color: '#ef4444',
-                        fontSize: '0.25rem', opacity: player.moves.length <= 1 ? 0.3 : 1,
+                        fontSize: 7, opacity: player.moves.length <= 1 ? 0.3 : 1,
                       }}
                     >
                       REMOVE
@@ -254,7 +254,7 @@ export default function StatsScreen() {
             {/* Move pool (learned but not equipped) */}
             {poolMoves.length > 0 && (
               <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
-                <div style={{ fontSize: '0.4rem', color: '#888', marginBottom: 8 }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: '#888', marginBottom: 8 }}>
                   LEARNED (NOT EQUIPPED)
                 </div>
                 {poolMoves.map(moveId => {
@@ -268,11 +268,11 @@ export default function StatsScreen() {
                       padding: '6px 4px', borderBottom: '1px solid #1a1a1a',
                     }}>
                       <div>
-                        <span style={{ fontSize: '0.38rem', color: '#999' }}>{move.name}</span>
-                        <span style={{ fontSize: '0.28rem', color: mColor, marginLeft: 6 }}>
+                        <span style={{ fontSize: 'var(--fs-xs)', color: '#999' }}>{move.name}</span>
+                        <span style={{ fontSize: 7, color: mColor, marginLeft: 6 }}>
                           {move.category.toUpperCase()}
                         </span>
-                        <div style={{ fontSize: '0.25rem', color: '#555', marginTop: 2 }}>
+                        <div style={{ fontSize: 7, color: '#555', marginTop: 2 }}>
                           PWR:{move.power} ACC:{move.accuracy} STA:{move.staminaCost}
                         </div>
                       </div>
@@ -283,7 +283,7 @@ export default function StatsScreen() {
                           padding: '4px 8px', background: '#1a2a1a',
                           border: `1px solid ${canEquip ? '#22c55e' : '#333'}`,
                           color: canEquip ? '#22c55e' : '#555',
-                          fontSize: '0.25rem',
+                          fontSize: 7,
                         }}
                       >
                         {canEquip ? 'EQUIP' : 'FULL'}
@@ -296,7 +296,7 @@ export default function StatsScreen() {
 
             {/* Belt slot progression */}
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
-              <div style={{ fontSize: '0.35rem', color: '#666', textAlign: 'center' }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: '#666', textAlign: 'center' }}>
                 Belt upgrades unlock more slots:<br/>
                 {BELTS.map(b => `${b.charAt(0).toUpperCase() + b.slice(1)}: ${BELT_MOVE_SLOTS[b]}`).join(' → ')}
               </div>
