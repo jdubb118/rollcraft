@@ -35,7 +35,7 @@ export const BELT_XP_THRESHOLDS: Record<Belt, number> = {
 };
 
 export const BELT_MOVE_SLOTS: Record<Belt, number> = {
-  white: 4, blue: 6, purple: 8, brown: 10, black: 12,
+  white: 5, blue: 7, purple: 9, brown: 11, black: 13,
 };
 
 // ── IVs (rolled at creation, 0-15) ──
