@@ -120,6 +120,7 @@ export interface Grappler {
   ivs: IVs;
   evs: EVs;
   moves: string[]; // move IDs
+  giColor?: string; // player gi color (hex)
 }
 
 // ── Battle-time grappler ──

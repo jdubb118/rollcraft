@@ -1,5 +1,5 @@
 import type { BattleState } from '../engine/types';
-import { getGrapplerSprite, SPRITE_W, SPRITE_H } from './SpriteData';
+import { getGrapplerSprite, getPlayerSprite, SPRITE_W, SPRITE_H } from './SpriteData';
 import { POSITIONS } from '../data/positions';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 
@@ -63,7 +63,7 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   const scale = 4;
 
   // Draw opponent (top-right, facing left)
-  const opponentSprite = getGrapplerSprite(state.opponent.grappler.style, scale);
+  const opponentSprite = getGrapplerSprite(state.opponent.grappler.style, scale, state.opponent.grappler.belt);
   const opX = CANVAS_WIDTH - 80 - SPRITE_W * scale;
   const opY = 60;
   ctx.save();
@@ -72,8 +72,11 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   ctx.drawImage(opponentSprite, 0, 0);
   ctx.restore();
 
-  // Draw player (bottom-left, facing right)
-  const playerSprite = getGrapplerSprite(state.player.grappler.style, scale);
+  // Draw player (bottom-left, facing right) — use gi color if set
+  const playerGi = state.player.grappler.giColor;
+  const playerSprite = playerGi
+    ? getPlayerSprite(playerGi, scale, state.player.grappler.belt)
+    : getGrapplerSprite(state.player.grappler.style, scale, state.player.grappler.belt);
   const plX = 80;
   const plY = CANVAS_HEIGHT - 60 - SPRITE_H * scale;
   ctx.drawImage(playerSprite, plX, plY);
