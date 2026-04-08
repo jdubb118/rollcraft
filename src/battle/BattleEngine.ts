@@ -26,6 +26,16 @@ export const STALL_MOVE: Move = {
   chainPotential: [], description: 'Catch your breath. Recover stamina.',
 };
 
+// SPAZ — universal escape, works from ANY position. Low accuracy, high
+// stamina cost, but always available. Every white belt knows how to spaz.
+export const SPAZ_MOVE: Move = {
+  id: '__spaz__', name: 'Spaz Out', category: 'escape', style: 'wrestler',
+  posReq: [], resultPosition: null, resultRole: null, // resolved dynamically
+  power: 15, accuracy: 55, staminaCost: 14,
+  statAttack: 'spd', statDefense: 'tec',
+  chainPotential: [], description: 'Explosive scramble. No technique, pure survival.',
+};
+
 export function createBattleState(playerGrappler: Grappler, opponentGrappler: Grappler): BattleState {
   const belts: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
   const matchBelt = belts[Math.min(belts.indexOf(playerGrappler.belt), belts.indexOf(opponentGrappler.belt))];
@@ -139,7 +149,10 @@ export function getLegalMoves(state: BattleState, who: 'player' | 'opponent'): M
   });
 
   const affordable = legal.filter(m => fighter.currentStamina >= m.staminaCost);
-  if (affordable.length === 0) return [STALL_MOVE];
+  if (affordable.length === 0) return [SPAZ_MOVE, STALL_MOVE];
+
+  // If the only real moves available are few, always offer SPAZ as a scramble option
+  if (legal.length <= 1) return [...legal, SPAZ_MOVE, STALL_MOVE];
   return [...legal, STALL_MOVE];
 }
 
@@ -173,6 +186,50 @@ function executeMove(
     state.log.push(`${attackerName} is stunned from the impact! Forced to recover.`);
     const recovery = 8 + Math.floor(attacker.stats.end / 15);
     attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
+    attacker.lastMoveId = null;
+    return;
+  }
+
+  // ── SPAZ (universal scramble) ──
+  if (move.id === '__spaz__') {
+    const cost = Math.ceil(14 * getFatigueModifiers(getFatiguePhase(state.turn, attacker.stats.end)).costMod);
+    deductStamina(attacker, cost);
+    state.log.push(`${attackerName} SPAZZES OUT! Explosive scramble!`);
+
+    // Accuracy check — SPD vs TEC
+    const acc = 55 + (attacker.isGassed ? -20 : 0);
+    if (Math.random() * 100 > acc) {
+      state.log.push(`Wild scramble goes nowhere!`);
+      if (attacker.momentum > 0) { attacker.momentum = 0; }
+      attacker.lastMoveId = null;
+      return;
+    }
+
+    // Success — scramble to a better position
+    const attackerRole = getRole(state.position, state.topFighter, attackerIs);
+    if (attackerRole === 'bottom') {
+      // Bottom: scramble to guard or standing
+      const outcomes = ['closed-guard', 'open-guard', 'half-guard', 'standing'] as const;
+      const newPos = outcomes[Math.floor(Math.random() * outcomes.length)];
+      state.position = newPos;
+      if (newPos === 'standing') {
+        state.topFighter = null;
+        state.log.push(`Scrambled back to feet!`);
+      } else {
+        state.topFighter = attackerIs === 'player' ? 'opponent' : 'player';
+        state.log.push(`Scrambled to ${getPositionDisplayName(newPos, 'bottom')}!`);
+      }
+    } else if (attackerRole === 'top') {
+      // Top: scramble to advance or return to standing
+      state.position = 'standing';
+      state.topFighter = null;
+      state.log.push(`Scrambled back to feet!`);
+    } else {
+      // Neutral: scramble stays neutral but resets position
+      state.position = 'standing';
+      state.topFighter = null;
+      state.log.push(`Reset to standing!`);
+    }
     attacker.lastMoveId = null;
     return;
   }
