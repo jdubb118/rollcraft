@@ -1,6 +1,31 @@
 import type { BattleGrappler, Position } from '../engine/types';
 import { POSITIONS } from '../data/positions';
 
+// ── Fatigue curve — models real BJJ match pacing ──
+export type FatiguePhase = 'fresh' | 'burn' | 'second-wind' | 'grind';
+
+export function getFatiguePhase(turn: number, endStat: number): FatiguePhase {
+  // High END (>35 computed) shortens Burn, extends Second Wind
+  const highEnd = endStat > 35;
+  if (turn <= 3) return 'fresh';
+  if (turn <= (highEnd ? 5 : 6)) return 'burn';
+  if (turn <= 9) return 'second-wind';
+  return 'grind';
+}
+
+export function getFatigueModifiers(phase: FatiguePhase): {
+  statMod: number;
+  costMod: number;
+  recoveryMod: number;
+} {
+  switch (phase) {
+    case 'fresh': return { statMod: 1.05, costMod: 1.0, recoveryMod: 1.0 };
+    case 'burn': return { statMod: 1.0, costMod: 1.25, recoveryMod: 0.70 };
+    case 'second-wind': return { statMod: 1.0, costMod: 1.0, recoveryMod: 1.0 };
+    case 'grind': return { statMod: 1.0, costMod: 1.10, recoveryMod: 0.85 };
+  }
+}
+
 export function getMaxStamina(endStat: number, level: number): number {
   return Math.floor(endStat * 1.5 + level * 0.5 + 50);
 }
@@ -25,8 +50,9 @@ export function deductStamina(fighter: BattleGrappler, cost: number): void {
   fighter.isGassed = fighter.currentStamina === 0;
 }
 
-export function recoverStamina(fighter: BattleGrappler, position: Position, isTop: boolean): void {
-  const recovery = getStaminaRecovery(position, fighter.stats.end, isTop);
+export function recoverStamina(fighter: BattleGrappler, position: Position, isTop: boolean, recoveryMod: number = 1.0): void {
+  const baseRecovery = getStaminaRecovery(position, fighter.stats.end, isTop);
+  const recovery = Math.max(1, Math.floor(baseRecovery * recoveryMod));
   fighter.currentStamina = Math.min(fighter.maxStamina, fighter.currentStamina + recovery);
   if (fighter.currentStamina > fighter.maxStamina * 0.2) {
     fighter.isGassed = false;

@@ -1,4 +1,4 @@
-import type { Grappler, Stats, Belt } from '../engine/types';
+import type { Grappler, Stats, Belt, Frame, StatKey } from '../engine/types';
 import { BELT_LEVELS, BELT_XP_THRESHOLDS } from '../engine/types';
 import { getMaxStamina } from './StaminaSystem';
 
@@ -32,11 +32,19 @@ function calcHp(base: number, iv: number, ev: number, level: number): number {
   return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10) + 60;
 }
 
+// Frame multipliers — light fighters are fast+flexible, heavy are strong+tough
+const FRAME_MODS: Record<Frame, Partial<Record<StatKey, number>>> = {
+  light:  { str: 0.85, flx: 1.10, spd: 1.15 },
+  medium: {},
+  heavy:  { str: 1.15, tgh: 1.10, spd: 0.90, flx: 0.90 },
+};
+
 export function computeStats(grappler: Grappler): Stats {
   const level = getLevel(grappler);
   const { baseStats, ivs, evs } = grappler;
+  const frameMods = FRAME_MODS[grappler.frame || 'medium'];
 
-  return {
+  const raw = {
     maxHp: calcHp(baseStats.hp, ivs.str, evs.str, level),
     str: calcStat(baseStats.str, ivs.str, evs.str, level),
     tec: calcStat(baseStats.tec, ivs.tec, evs.tec, level),
@@ -45,6 +53,14 @@ export function computeStats(grappler: Grappler): Stats {
     spd: calcStat(baseStats.spd, ivs.spd, evs.spd, level),
     end: calcStat(baseStats.end, ivs.end, evs.end, level),
   };
+
+  // Apply frame multipliers
+  for (const [stat, mod] of Object.entries(frameMods)) {
+    const key = stat as keyof Stats;
+    if (key in raw) raw[key] = Math.floor(raw[key] * (mod as number));
+  }
+
+  return raw;
 }
 
 export function createBattleGrappler(grappler: Grappler) {
@@ -60,5 +76,8 @@ export function createBattleGrappler(grappler: Grappler) {
     maxStamina,
     isGassed: false,
     lastMoveId: null as string | null,
+    momentum: 0,
+    flinched: false,
+    setupBonus: null,
   };
 }

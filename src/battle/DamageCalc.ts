@@ -51,6 +51,7 @@ export function calculateDamage(
   position: Position,
   attackerRole: PositionRole,
   isChained: boolean = false,
+  momentum: number = 0,
 ): { damage: number; isCrit: boolean } {
   if (move.power === 0) return { damage: 0, isCrit: false };
 
@@ -76,8 +77,17 @@ export function calculateDamage(
   if (attacker.isGassed) damage *= 0.6;
   if (defender.isGassed) damage *= 1.2; // gassed defender takes 20% more
 
+  // Momentum bonus (flow state)
+  if (momentum >= 2) damage *= (1 + momentum * 0.05); // 2→1.10x, 3→1.15x
+
+  // Setup bonus (grip/control)
+  if (attacker.setupBonus) damage *= (1 + attacker.setupBonus.damageMod);
+
   // Critical hit check
-  const critChance = calculateCritChance(attacker, move, position, attackerRole, isChained);
+  let critBonus = 0;
+  if (momentum >= 3) critBonus += 0.05;
+  if (attacker.setupBonus) critBonus += attacker.setupBonus.critMod;
+  const critChance = calculateCritChance(attacker, move, position, attackerRole, isChained) + critBonus;
   const isCrit = Math.random() < critChance;
   if (isCrit) damage *= 1.5;
 

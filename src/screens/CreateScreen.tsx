@@ -4,14 +4,20 @@ import { STARTER_PATHS, GI_COLORS, type GiColor, type StarterPath } from '../dat
 import { STYLE_NAMES } from '../engine/constants';
 import { rollIVs } from '../engine/random';
 import { savePlayer, saveOpponent } from '../state/saveLoad';
-import type { Grappler } from '../engine/types';
-import { ARCHETYPES } from '../data/archetypes';
+import type { Grappler, Frame, Style } from '../engine/types';
+import { ARCHETYPES, ARCHETYPE_FRAMES } from '../data/archetypes';
 
 function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
 type Phase = 'name' | 'gym' | 'gi' | 'intro' | 'choice' | 'narrative' | 'ready';
+
+const STYLE_FRAME: Record<Style, Frame> = {
+  'wrestler': 'heavy', 'judoka': 'heavy', 'pressure-passer': 'heavy',
+  'guard-player': 'light', 'leg-locker': 'light', 'berimbolo': 'light',
+  'sub-hunter': 'medium', 'controller': 'medium',
+};
 
 function createPlayerGrappler(path: StarterPath, name: string, giColor: string, gymName: string, coachName: string): Grappler {
   return {
@@ -25,6 +31,7 @@ function createPlayerGrappler(path: StarterPath, name: string, giColor: string, 
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: path.moves,
     learnedMoves: [...path.moves],
+    frame: STYLE_FRAME[path.style],
     giColor,
     gymName,
     coachName,
@@ -45,6 +52,7 @@ function createRandomOpponent(): Grappler {
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: arch.startingMoves,
     learnedMoves: [...arch.startingMoves],
+    frame: STYLE_FRAME[arch.style],
   };
 }
 

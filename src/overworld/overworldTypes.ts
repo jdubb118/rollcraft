@@ -1,4 +1,4 @@
-import type { Style, Belt } from '../engine/types';
+import type { Style, Belt, BaseStats, EVs, Frame } from '../engine/types';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -34,6 +34,9 @@ export interface NPCDef {
   position: { col: number; row: number };
   wanders: boolean;
   wanderArea?: { minCol: number; maxCol: number; minRow: number; maxRow: number };
+  baseStats?: BaseStats;
+  evSpread?: EVs;
+  frame?: Frame;
 }
 
 export interface NPCState {

@@ -1,4 +1,16 @@
-import type { Archetype } from '../engine/types';
+import type { Archetype, Frame } from '../engine/types';
+
+// Frame mapping per archetype
+export const ARCHETYPE_FRAMES: Record<string, Frame> = {
+  'pressure-machine': 'heavy',
+  'guard-wizard': 'light',
+  'takedown-artist': 'heavy',
+  'leg-reaper': 'light',
+  'flow-roller': 'light',
+  'judo-heavy': 'heavy',
+  'finish-hunter': 'medium',
+  'chess-player': 'medium',
+};
 
 export const ARCHETYPES: Archetype[] = [
   {

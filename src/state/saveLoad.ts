@@ -14,8 +14,9 @@ export function loadPlayer(): Grappler | null {
   const data = localStorage.getItem(PLAYER_KEY);
   if (!data) return null;
   const player = JSON.parse(data) as Grappler;
-  // Backward compat: ensure learnedMoves exists
+  // Backward compat
   if (!player.learnedMoves) player.learnedMoves = [...player.moves];
+  if (!player.frame) player.frame = 'medium';
   return player;
 }
 
@@ -49,6 +50,8 @@ const DEFAULT_PROGRESSION: PlayerProgression = {
   currentRegionId: 'home',
   storyFlags: {},
   npcDefeated: {},
+  npcScouted: {},
+  trainingSessions: 0,
   totalWins: 0,
   totalLosses: 0,
 };
@@ -108,6 +111,30 @@ export function addStamp(stampId: string): void {
     prog.stamps.push(stampId);
     saveProgression(prog);
   }
+}
+
+// ── Scouting ──
+export function markScouted(npcId: string): void {
+  const prog = loadProgression();
+  if (!prog.npcScouted) prog.npcScouted = {};
+  prog.npcScouted[npcId] = true;
+  saveProgression(prog);
+}
+
+export function isScouted(npcId: string): boolean {
+  const prog = loadProgression();
+  return prog.npcScouted?.[npcId] ?? false;
+}
+
+// ── Training ──
+export function getTrainingSessions(): number {
+  return loadProgression().trainingSessions ?? 0;
+}
+
+export function addTrainingSession(): void {
+  const prog = loadProgression();
+  prog.trainingSessions = (prog.trainingSessions ?? 0) + 1;
+  saveProgression(prog);
 }
 
 // ── Utilities ──

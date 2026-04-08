@@ -6,10 +6,12 @@ import { createBattleState, getPlayerMoves, executeTurn } from '../battle/Battle
 import { renderBattle } from '../render/BattleRenderer';
 import { getRole, getPositionDisplayName } from '../data/positions';
 import MovePanel from '../components/MovePanel';
-import { loadPlayer, loadOpponent, saveBattleResult } from '../state/saveLoad';
+import { loadPlayer, loadOpponent, saveBattleResult, isScouted, markScouted } from '../state/saveLoad';
+import ScoutPanel from '../components/ScoutPanel';
 
 export default function BattleScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showScout, setShowScout] = useState(false);
   const [state, setState] = useState<BattleState | null>(null);
   const [animFrame, setAnimFrame] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
@@ -59,7 +61,9 @@ export default function BattleScreen() {
         ? 100 + Math.floor(newState.turn * 2)
         : isDraw ? 50 : Math.floor(30 + newState.turn);
 
-      // Save result but DON'T auto-navigate — let player review the log
+      // Mark opponent as scouted (now you know their tendencies)
+      markScouted(newState.opponent.grappler.name);
+
       saveBattleResult({
         winner: newState.winner ?? 'draw',
         method: newState.winMethod ?? 'points',
@@ -147,8 +151,27 @@ export default function BattleScreen() {
           <div>{opponentName}</div>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 'bold' }}>{state.opponentPoints}</div>
           <div style={{ color: '#666', fontSize: 'var(--fs-xs)' }}>adv: {state.opponentAdvantages}</div>
+          <button
+            onClick={() => setShowScout(true)}
+            style={{
+              marginTop: 2, padding: '2px 6px', background: '#1a1a2e',
+              color: '#3498db', fontSize: 7, border: '1px solid #3498db',
+            }}
+          >
+            SCOUT
+          </button>
         </div>
       </div>
+
+      {/* Scout panel overlay */}
+      {showScout && (
+        <ScoutPanel
+          opponent={state.opponent}
+          player={state.player}
+          isKnown={isScouted(state.opponent.grappler.name)}
+          onClose={() => setShowScout(false)}
+        />
+      )}
 
       {/* Canvas area */}
       <div style={{

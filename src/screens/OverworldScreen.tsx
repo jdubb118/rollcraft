@@ -5,12 +5,13 @@ import { STARTER_GYM, PLAYER_SPAWN, STARTER_GYM_NPCS } from '../overworld/maps/s
 import { createOverworldState, updateOverworld, getFacingNPC } from '../overworld/OverworldEngine';
 import { renderOverworld } from '../overworld/OverworldRenderer';
 import type { OverworldState, Direction, MenuOption, NPCState } from '../overworld/overworldTypes';
-import { loadPlayer, savePlayer, saveOpponent, loadProgression, spendMoney } from '../state/saveLoad';
-import type { Grappler, Belt } from '../engine/types';
+import { loadPlayer, savePlayer, saveOpponent, loadProgression, spendMoney, getTrainingSessions, addTrainingSession } from '../state/saveLoad';
+import type { Grappler, Belt, StatKey } from '../engine/types';
 import { BELT_XP_THRESHOLDS, BELT_MOVE_SLOTS } from '../engine/types';
 import { getMove } from '../data/moves';
 import { rollIVs } from '../engine/random';
 import { getLevel } from '../battle/stats';
+import { getDifficulty } from '../components/ScoutPanel';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 import DPad from '../components/DPad';
@@ -20,18 +21,25 @@ function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+// XP values so getLevel() returns appropriate level for each belt
+const BELT_XP_MID: Record<Belt, number> = {
+  white: 500, blue: 2500, purple: 7000, brown: 15000, black: 30000,
+};
+
 function npcToGrappler(npc: NPCState): Grappler {
+  const def = npc.def;
   return {
     id: makeId(),
-    name: npc.def.name,
-    style: npc.def.style,
-    belt: npc.def.belt,
-    xp: 0,
-    baseStats: { hp: 75, str: 70, tec: 70, tgh: 70, flx: 70, spd: 70, end: 70 },
+    name: def.name,
+    style: def.style,
+    belt: def.belt,
+    xp: BELT_XP_MID[def.belt],
+    baseStats: def.baseStats ?? { hp: 75, str: 70, tec: 70, tgh: 70, flx: 70, spd: 70, end: 70 },
     ivs: rollIVs(),
-    evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
-    moves: npc.def.moves,
-    learnedMoves: [...npc.def.moves],
+    evs: def.evSpread ?? { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
+    moves: def.moves,
+    learnedMoves: [...def.moves],
+    frame: def.frame ?? 'medium',
   };
 }
 
@@ -213,6 +221,51 @@ export default function OverworldScreen() {
     } else if (action === 'promote') {
       navigate('/promotion');
 
+    } else if (action === 'train') {
+      // Show stat training options
+      const prog = loadProgression();
+      const sessions = getTrainingSessions();
+      const maxSessions: Record<Belt, number> = { white: 10, blue: 25, purple: 45, brown: 70, black: 100 };
+      const cap = maxSessions[player.belt];
+      const baseCost = 50;
+      const costTier = Math.floor(sessions / 5);
+      const currentCost = baseCost * (1 + costTier);
+
+      if (sessions >= cap) {
+        showText(`You've maxed out your training for ${player.belt} belt.\n\nGet promoted to unlock more sessions.`);
+        return;
+      }
+
+      const statKeys: StatKey[] = ['str', 'tec', 'tgh', 'flx', 'spd', 'end'];
+      const statLabels: Record<StatKey, string> = { str: 'STR', tec: 'TEC', tgh: 'TGH', flx: 'FLX', spd: 'SPD', end: 'END' };
+      const trainOptions: MenuOption[] = statKeys.map(stat => ({
+        label: `${statLabels[stat]} +4 EVs (${player.evs[stat]}/252) — $${currentCost}`,
+        action: `train-stat:${stat}`,
+        disabled: prog.money < currentCost || player.evs[stat] >= 252,
+      }));
+
+      showMenu(
+        `Training session ${sessions + 1}/${cap}\n\nCost: $${currentCost} per session\nYou have $${prog.money}`,
+        trainOptions,
+      );
+
+    } else if (action.startsWith('train-stat:')) {
+      const stat = action.replace('train-stat:', '') as StatKey;
+      const sessions = getTrainingSessions();
+      const baseCost = 50;
+      const currentCost = baseCost * (1 + Math.floor(sessions / 5));
+
+      const paid = spendMoney(currentCost);
+      if (!paid) { showText("Not enough Mat Bucks."); return; }
+
+      player.evs[stat] = Math.min(252, player.evs[stat] + 4);
+      addTrainingSession();
+      savePlayer(player);
+      setPlayer({ ...player });
+
+      const statLabels: Record<StatKey, string> = { str: 'STR', tec: 'TEC', tgh: 'TGH', flx: 'FLX', spd: 'SPD', end: 'END' };
+      showText(`TRAINING COMPLETE!\n\n${statLabels[stat]} +4 EVs (now ${player.evs[stat]}/252)\n\n-$${currentCost}`);
+
     } else if (action === 'exam') {
       showText("You need more mat time before your next belt. Keep training.");
     }
@@ -252,10 +305,15 @@ export default function OverworldScreen() {
 
     const options: MenuOption[] = [];
     if (npc.def.role === 'training-partner') {
-      options.push({ label: "LET'S ROLL", action: 'roll' });
+      // Show difficulty label
+      const oppLevel = BELTS.indexOf(npc.def.belt) * 15 + 5;
+      const playerLevel = getLevel(player);
+      const diff = getDifficulty(playerLevel, oppLevel);
+      options.push({ label: `LET'S ROLL [${diff.label}]`, action: 'roll' });
     }
     if (npc.def.role === 'instructor' && npc.def.teachableMoves) {
       options.push({ label: 'LEARN A MOVE', action: 'learn' });
+      options.push({ label: 'TRAIN STATS', action: 'train' });
     }
     if (npc.def.role === 'professor' && player) {
       const beltIdx = BELTS.indexOf(player.belt);

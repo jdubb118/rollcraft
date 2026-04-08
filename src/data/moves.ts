@@ -12,6 +12,7 @@ export const MOVES: Move[] = [
     posReq: [neu('standing')], resultPosition: 'half-guard', resultRole: 'top',
     power: 55, accuracy: 85, staminaCost: 18, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['knee-cut', 'leg-drag'], description: 'Blast double leg takedown.',
+    impact: { flinchChance: 0.15, recoil: 4 },
   },
   {
     id: 'single-leg', name: 'Single Leg', category: 'takedown', style: 'wrestler',
@@ -24,12 +25,14 @@ export const MOVES: Move[] = [
     posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
     power: 65, accuracy: 75, staminaCost: 20, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['americana', 'kob-transition'], description: 'Major outer reap. Land in side control.',
+    impact: { flinchChance: 0.20, recoil: 4 },
   },
   {
     id: 'seoi-nage', name: 'Seoi Nage', category: 'takedown', style: 'judoka',
     posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
     power: 70, accuracy: 70, staminaCost: 22, statAttack: 'tec', statDefense: 'tgh',
     chainPotential: ['ns-transition'], description: 'Shoulder throw.',
+    impact: { flinchChance: 0.20, recoil: 5 },
   },
   {
     id: 'snap-down', name: 'Snap Down', category: 'takedown', style: 'controller',
@@ -440,12 +443,14 @@ export const MOVES: Move[] = [
     posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
     power: 68, accuracy: 70, staminaCost: 20, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['ns-transition'], description: 'Sweeping hip throw.',
+    impact: { flinchChance: 0.20, recoil: 5 },
   },
   {
     id: 'o-goshi', name: 'O Goshi', category: 'takedown', style: 'judoka',
     posReq: [neu('clinch')], resultPosition: 'mount', resultRole: 'top',
     power: 60, accuracy: 72, staminaCost: 20, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Major hip throw. Land in mount.',
+    impact: { flinchChance: 0.25, recoil: 6 },
   },
   {
     id: 'tomoe-nage', name: 'Tomoe Nage', category: 'takedown', style: 'judoka',
@@ -476,6 +481,7 @@ export const MOVES: Move[] = [
     posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
     power: 75, accuracy: 58, staminaCost: 24, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['americana', 'kob-transition'], description: 'Shoulder wheel. Massive throw.',
+    impact: { flinchChance: 0.25, recoil: 8 },
   },
   {
     id: 'sumi-gaeshi', name: 'Sumi Gaeshi', category: 'takedown', style: 'judoka',
@@ -538,6 +544,7 @@ export const MOVES: Move[] = [
     posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
     power: 80, accuracy: 55, staminaCost: 26, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['americana', 'kob-transition'], description: 'Explosive overhead throw. Max damage.',
+    impact: { flinchChance: 0.30, recoil: 8 },
   },
 
   // ── ADVANCED LEG LOCKS (10 new) ──
@@ -827,6 +834,43 @@ export const MOVES: Move[] = [
     posReq: [bot('mount')], resultPosition: 'half-guard', resultRole: 'bottom',
     power: 5, accuracy: 80, staminaCost: 10, statAttack: 'tec', statDefense: 'str',
     chainPotential: ['lockdown', 'deep-half-sweep'], description: 'Frame with the arms. Systematic escape.',
+  },
+  // ── SETUP MOVES (grips / control) ──
+  {
+    id: 'collar-grip', name: 'Collar Grip', category: 'setup', style: 'judoka',
+    posReq: [neu('standing'), neu('clinch'), top('closed-guard'), bot('closed-guard')],
+    resultPosition: null, resultRole: null,
+    power: 0, accuracy: 92, staminaCost: 6, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['osoto-gari', 'seoi-nage', 'cross-collar-mount'],
+    description: 'Establish a strong collar grip. Control the posture.',
+    setupBonus: { accuracyMod: 12, damageMod: 0.15, critMod: 0.05, duration: 2 },
+  },
+  {
+    id: 'underhook', name: 'Underhook', category: 'setup', style: 'wrestler',
+    posReq: [neu('standing'), neu('clinch'), top('half-guard'), bot('half-guard')],
+    resultPosition: null, resultRole: null,
+    power: 0, accuracy: 90, staminaCost: 7, statAttack: 'str', statDefense: 'str',
+    chainPotential: ['double-leg', 'single-leg', 'snap-down'],
+    description: 'Fight for the underhook. Whoever has it controls the exchange.',
+    setupBonus: { accuracyMod: 10, damageMod: 0.12, critMod: 0.03, duration: 2 },
+  },
+  {
+    id: 'pummeling', name: 'Pummeling', category: 'setup', style: 'wrestler',
+    posReq: [neu('clinch')],
+    resultPosition: null, resultRole: null,
+    power: 0, accuracy: 95, staminaCost: 5, statAttack: 'spd', statDefense: 'spd',
+    chainPotential: ['double-leg', 'single-leg', 'suplex', 'osoto-gari'],
+    description: 'Hand fight and pummel for dominant grip position.',
+    setupBonus: { accuracyMod: 15, damageMod: 0.10, critMod: 0.02, duration: 2 },
+  },
+  {
+    id: 'sleeve-control', name: 'Sleeve Control', category: 'setup', style: 'guard-player',
+    posReq: [bot('closed-guard'), bot('open-guard'), bot('half-guard')],
+    resultPosition: null, resultRole: null,
+    power: 0, accuracy: 92, staminaCost: 5, statAttack: 'tec', statDefense: 'str',
+    chainPotential: ['scissor-sweep', 'triangle', 'armbar-guard', 'omoplata'],
+    description: 'Control the sleeve. Break their posture. Set up sweeps and subs.',
+    setupBonus: { accuracyMod: 12, damageMod: 0.10, critMod: 0.05, duration: 2 },
   },
 ];
 

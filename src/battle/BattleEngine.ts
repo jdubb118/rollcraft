@@ -2,45 +2,33 @@ import type { BattleState, BattleGrappler, Move, Grappler, Belt, Position } from
 import { POSITIONS, getRole, getCategories, getPositionDisplayName } from '../data/positions';
 import { getMove } from '../data/moves';
 import { calculateDamage, getEffectivenessText } from './DamageCalc';
-import { deductStamina, recoverStamina } from './StaminaSystem';
+import { deductStamina, recoverStamina, getFatiguePhase, getFatigueModifiers } from './StaminaSystem';
 import { resolveSubmissionPhase } from './SubmissionMinigame';
 import { createBattleGrappler } from './stats';
+import { randInt } from '../engine/random';
 
 // Match time limits by belt (in turns — roughly 1 turn = 30 seconds)
 const MATCH_TURNS: Record<Belt, number> = {
-  white: 10,   // 5 min
-  blue: 12,    // 6 min
-  purple: 14,  // 7 min
-  brown: 16,   // 8 min
-  black: 20,   // 10 min
+  white: 10, blue: 12, purple: 14, brown: 16, black: 20,
 };
 
 // IBJJF point values
 const POINTS = {
-  takedown: 2,
-  sweep: 2,
-  kneeOnBelly: 2,
-  guardPass: 3,
-  mount: 4,
-  backControl: 4,
+  takedown: 2, sweep: 2, kneeOnBelly: 2, guardPass: 3, mount: 4, backControl: 4,
 } as const;
 
 // The "Stall" move — always available, costs 0, recovers stamina
 export const STALL_MOVE: Move = {
   id: '__stall__', name: 'Stall', category: 'escape', style: 'controller',
-  posReq: [], // special — always available
-  resultPosition: null, resultRole: null,
+  posReq: [], resultPosition: null, resultRole: null,
   power: 0, accuracy: 100, staminaCost: 0,
   statAttack: 'end', statDefense: 'end',
   chainPotential: [], description: 'Catch your breath. Recover stamina.',
 };
 
 export function createBattleState(playerGrappler: Grappler, opponentGrappler: Grappler): BattleState {
-  // Use the lower belt's time limit
   const belts: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
-  const playerIdx = belts.indexOf(playerGrappler.belt);
-  const opponentIdx = belts.indexOf(opponentGrappler.belt);
-  const matchBelt = belts[Math.min(playerIdx, opponentIdx)];
+  const matchBelt = belts[Math.min(belts.indexOf(playerGrappler.belt), belts.indexOf(opponentGrappler.belt))];
 
   const state: BattleState = {
     turn: 1,
@@ -58,11 +46,8 @@ export function createBattleState(playerGrappler: Grappler, opponentGrappler: Gr
     submissionAttacker: null,
     firstActor: 'player',
     firstActorDone: false,
-    // Scoring
-    playerPoints: 0,
-    opponentPoints: 0,
-    playerAdvantages: 0,
-    opponentAdvantages: 0,
+    playerPoints: 0, opponentPoints: 0,
+    playerAdvantages: 0, opponentAdvantages: 0,
     ruleSet: 'points',
     lastPositionChange: null,
   };
@@ -70,101 +55,63 @@ export function createBattleState(playerGrappler: Grappler, opponentGrappler: Gr
   return state;
 }
 
-// ── Determine who acts first based on speed + position ──
+// ── Determine who acts first ──
 function computeFirstActor(state: BattleState): 'player' | 'opponent' {
   const posData = POSITIONS[state.position];
   const playerRole = getRole(state.position, state.topFighter, 'player');
   const opponentRole = getRole(state.position, state.topFighter, 'opponent');
 
-  const playerMod = playerRole === 'top' ? posData.atbModTop
-    : playerRole === 'bottom' ? posData.atbModBottom : 1.0;
-  const opponentMod = opponentRole === 'top' ? posData.atbModTop
-    : opponentRole === 'bottom' ? posData.atbModBottom : 1.0;
+  const playerMod = playerRole === 'top' ? posData.atbModTop : playerRole === 'bottom' ? posData.atbModBottom : 1.0;
+  const opponentMod = opponentRole === 'top' ? posData.atbModTop : opponentRole === 'bottom' ? posData.atbModBottom : 1.0;
 
-  const playerGasPenalty = state.player.isGassed ? 0.6 : 1.0;
-  const opponentGasPenalty = state.opponent.isGassed ? 0.6 : 1.0;
-
-  const playerATB = state.player.stats.spd * playerMod * playerGasPenalty;
-  const opponentATB = state.opponent.stats.spd * opponentMod * opponentGasPenalty;
+  const playerATB = state.player.stats.spd * playerMod * (state.player.isGassed ? 0.6 : 1.0);
+  const opponentATB = state.opponent.stats.spd * opponentMod * (state.opponent.isGassed ? 0.6 : 1.0);
 
   if (playerATB === opponentATB) return Math.random() > 0.5 ? 'player' : 'opponent';
   return playerATB >= opponentATB ? 'player' : 'opponent';
 }
 
-// ── Award points for position changes (IBJJF rules) ──
-function awardPositionPoints(
-  state: BattleState,
-  move: Move,
-  attackerIs: 'player' | 'opponent',
-  oldPosition: Position,
-): void {
+// ── Award IBJJF points ──
+function awardPositionPoints(state: BattleState, move: Move, attackerIs: 'player' | 'opponent', oldPosition: Position): void {
   if (!move.resultPosition) return;
   const newPos = move.resultPosition;
+  let pts = 0, reason = '';
 
-  let pts = 0;
-  let reason = '';
-
-  // Takedowns (standing → any ground position where attacker is top)
-  if (oldPosition === 'standing' || oldPosition === 'clinch') {
-    if (move.category === 'takedown' && move.resultRole === 'top') {
-      pts = POINTS.takedown;
-      reason = 'TAKEDOWN';
-    }
+  if ((oldPosition === 'standing' || oldPosition === 'clinch') && move.category === 'takedown' && move.resultRole === 'top') {
+    pts = POINTS.takedown; reason = 'TAKEDOWN';
   }
-
-  // Sweeps (bottom → top)
-  if (move.category === 'sweep') {
-    pts = POINTS.sweep;
-    reason = 'SWEEP';
-  }
-
-  // Guard pass
-  if (move.category === 'pass') {
-    pts = POINTS.guardPass;
-    reason = 'GUARD PASS';
-  }
-
-  // Mount achieved
-  if (newPos === 'mount' && move.resultRole === 'top') {
-    pts = POINTS.mount;
-    reason = 'MOUNT';
-  }
-
-  // Back control achieved
-  if (newPos === 'back-control' && move.resultRole === 'top') {
-    pts = POINTS.backControl;
-    reason = 'BACK CONTROL';
-  }
-
-  // Knee on belly
-  if (newPos === 'knee-on-belly' && move.resultRole === 'top') {
-    pts = POINTS.kneeOnBelly;
-    reason = 'KNEE ON BELLY';
-  }
+  if (move.category === 'sweep') { pts = POINTS.sweep; reason = 'SWEEP'; }
+  if (move.category === 'pass') { pts = POINTS.guardPass; reason = 'GUARD PASS'; }
+  if (newPos === 'mount' && move.resultRole === 'top') { pts = POINTS.mount; reason = 'MOUNT'; }
+  if (newPos === 'back-control' && move.resultRole === 'top') { pts = POINTS.backControl; reason = 'BACK CONTROL'; }
+  if (newPos === 'knee-on-belly' && move.resultRole === 'top') { pts = POINTS.kneeOnBelly; reason = 'KNEE ON BELLY'; }
 
   if (pts > 0) {
-    if (attackerIs === 'player') {
-      state.playerPoints += pts;
-      state.log.push(`⚡ ${reason}! +${pts} points (You: ${state.playerPoints} - Opp: ${state.opponentPoints})`);
-    } else {
-      state.opponentPoints += pts;
-      state.log.push(`⚡ ${reason}! +${pts} points (You: ${state.playerPoints} - Opp: ${state.opponentPoints})`);
-    }
+    if (attackerIs === 'player') state.playerPoints += pts;
+    else state.opponentPoints += pts;
+    state.log.push(`⚡ ${reason}! +${pts} points (You: ${state.playerPoints} - Opp: ${state.opponentPoints})`);
   }
 }
 
-// ── Award advantage for near-misses ──
 function awardAdvantage(state: BattleState, attackerIs: 'player' | 'opponent', reason: string): void {
-  if (attackerIs === 'player') {
-    state.playerAdvantages++;
-    state.log.push(`△ Advantage — ${reason}`);
-  } else {
-    state.opponentAdvantages++;
-    state.log.push(`△ Advantage — ${reason}`);
-  }
+  if (attackerIs === 'player') state.playerAdvantages++;
+  else state.opponentAdvantages++;
+  state.log.push(`△ Advantage — ${reason}`);
 }
 
-// ── Get legal moves for a fighter ──
+// ── Guard retention roll (defender tries to retain guard vs pass) ──
+function rollGuardRetention(
+  attacker: BattleGrappler, defender: BattleGrappler, move: Move,
+): 'clean-pass' | 'partial-pass' | 'stuffed' {
+  const retention = Math.floor(defender.stats.flx * 0.5 + defender.stats.tec * 0.3 + defender.stats.spd * 0.2) + randInt(0, 15);
+  const passForce = Math.floor(move.power * 0.6 + attacker.stats.str * 0.3) + randInt(0, 15);
+  const diff = passForce - retention;
+  if (diff < 0) return 'stuffed';
+  if (diff < 15) return 'partial-pass';
+  return 'clean-pass';
+}
+
+// ── Get legal moves ──
 export function getLegalMoves(state: BattleState, who: 'player' | 'opponent'): Move[] {
   const fighter = who === 'player' ? state.player : state.opponent;
   const role = getRole(state.position, state.topFighter, who);
@@ -176,26 +123,21 @@ export function getLegalMoves(state: BattleState, who: 'player' | 'opponent'): M
 
   const legal = allMoves.filter(m => {
     const posMatch = m.posReq.some(req =>
-      req.position === state.position && (req.role === role || req.role === 'neutral' && role === 'neutral')
+      req.position === state.position && (req.role === role || (req.role === 'neutral' && role === 'neutral'))
     );
     if (!posMatch) return false;
     return allowedCategories.includes(m.category);
   });
 
-  // Always include STALL as an option
   const affordable = legal.filter(m => fighter.currentStamina >= m.staminaCost);
   if (affordable.length === 0) return [STALL_MOVE];
-
-  // Add stall to the end so player always has the option
   return [...legal, STALL_MOVE];
 }
 
-// Convenience for BattleScreen
 export function getPlayerMoves(state: BattleState): Move[] {
   return getLegalMoves(state, 'player');
 }
 
-// ── Check if a move is chained from previous ──
 function isChained(lastMoveId: string | null, currentMove: Move): boolean {
   if (!lastMoveId) return false;
   const lastMove = getMove(lastMoveId);
@@ -212,57 +154,95 @@ function executeMove(
   attackerIs: 'player' | 'opponent',
 ): void {
   const attackerName = attacker.grappler.name;
+  const defenderName = defender.grappler.name;
   const attackerRole = getRole(state.position, state.topFighter, attackerIs);
 
-  // Handle Stall move
+  // ── FLINCH CHECK (from previous turn's impact) ──
+  if (attacker.flinched) {
+    attacker.flinched = false;
+    attacker.momentum = 0;
+    state.log.push(`${attackerName} is stunned from the impact! Forced to recover.`);
+    const recovery = 8 + Math.floor(attacker.stats.end / 15);
+    attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
+    attacker.lastMoveId = null;
+    return;
+  }
+
+  // ── STALL ──
   if (move.id === '__stall__') {
     const recovery = 15 + Math.floor(attacker.stats.end / 10);
     attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
     if (attacker.currentStamina > attacker.maxStamina * 0.2) attacker.isGassed = false;
     attacker.lastMoveId = null;
+    // Stall resets momentum
+    if (attacker.momentum > 0) {
+      attacker.momentum = 0;
+      state.log.push(`Momentum reset!`);
+    }
     state.log.push(`${attackerName} stalls and recovers stamina (+${recovery})`);
     return;
   }
 
-  // Validate move is still legal (position may have changed if opponent went first)
+  // ── POSITION VALIDATION ──
   const posMatch = move.posReq.some(req =>
-    req.position === state.position && (req.role === attackerRole || req.role === 'neutral' && attackerRole === 'neutral')
+    req.position === state.position && (req.role === attackerRole || (req.role === 'neutral' && attackerRole === 'neutral'))
   );
   if (!posMatch) {
     state.log.push(`${attackerName}'s ${move.name} is no longer valid — forced to stall!`);
-    const recovery = 10 + Math.floor(attacker.stats.end / 15);
-    attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
+    attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + 10);
     attacker.lastMoveId = null;
+    if (attacker.momentum > 0) { attacker.momentum = 0; state.log.push(`Momentum reset!`); }
     return;
   }
 
-  // Stamina cost (with chain discount)
+  // ── FATIGUE-ADJUSTED STAMINA COST ──
+  const fatigue = getFatiguePhase(state.turn, attacker.stats.end);
+  const fatigueMods = getFatigueModifiers(fatigue);
   let cost = move.staminaCost;
   if (isChained(attacker.lastMoveId, move)) cost = Math.max(1, cost - 3);
+  cost = Math.ceil(cost * fatigueMods.costMod);
   deductStamina(attacker, cost);
 
   state.log.push(`${attackerName} attempts ${move.name}!`);
 
-  // Accuracy check
+  // ── SETUP MOVE (grips/control) ──
+  if (move.category === 'setup' && move.setupBonus) {
+    attacker.setupBonus = {
+      turnsRemaining: move.setupBonus.duration,
+      accuracyMod: move.setupBonus.accuracyMod,
+      damageMod: move.setupBonus.damageMod,
+      critMod: move.setupBonus.critMod,
+    };
+    attacker.momentum = Math.min(3, attacker.momentum + 1);
+    state.log.push(`${attackerName} establishes ${move.name}! Next ${move.setupBonus.duration} moves boosted.`);
+    attacker.lastMoveId = move.id;
+    if (attacker.momentum > 0) state.log.push(`Momentum: ${attacker.momentum}`);
+    return;
+  }
+
+  // ── ACCURACY CHECK ──
   let accuracy = move.accuracy;
   if (isChained(attacker.lastMoveId, move)) accuracy += 10;
   if (attacker.isGassed) accuracy -= 30;
+  // Momentum accuracy bonus
+  if (attacker.momentum >= 1) accuracy += attacker.momentum * 5;
+  // Setup accuracy bonus
+  if (attacker.setupBonus) accuracy += attacker.setupBonus.accuracyMod;
 
   if (Math.random() * 100 > accuracy) {
     state.log.push(`${move.name} missed!`);
-    // Near-miss on submission = advantage
-    if (move.category === 'submission') {
-      awardAdvantage(state, attackerIs, `near-submission (${move.name})`);
-    }
+    if (move.category === 'submission') awardAdvantage(state, attackerIs, `near-submission (${move.name})`);
     attacker.lastMoveId = move.id;
+    // Miss resets momentum
+    if (attacker.momentum > 0) { attacker.momentum = 0; state.log.push(`Momentum reset!`); }
     return;
   }
 
   const oldPosition = state.position;
+  const chained = isChained(attacker.lastMoveId, move);
 
-  // Handle submission
+  // ── SUBMISSION ──
   if (move.category === 'submission') {
-    const chained = isChained(attacker.lastMoveId, move);
     let deepestPhase = 0;
     for (let phase = 1; phase <= 3; phase++) {
       const result = resolveSubmissionPhase(attacker, defender, move, phase, state.position, chained);
@@ -275,36 +255,57 @@ function executeMove(
         state.winner = attackerIs;
         state.winMethod = 'submission';
         state.phase = 'battle-over';
-        state.log.push(`${defender.grappler.name} taps out! SUBMISSION!`);
+        state.log.push(`${defenderName} taps out! SUBMISSION!`);
         attacker.lastMoveId = move.id;
+        attacker.momentum = Math.min(3, attacker.momentum + 1);
         return;
       }
       if (result.escaped) break;
     }
-    // Escaped but got deep = advantage
-    if (deepestPhase >= 2) {
-      awardAdvantage(state, attackerIs, `deep submission attempt (${move.name})`);
-    }
-    // Escaped — deal some stamina damage to defender (energy spent defending)
+    if (deepestPhase >= 2) awardAdvantage(state, attackerIs, `deep submission attempt (${move.name})`);
     attacker.lastMoveId = move.id;
+    attacker.momentum = Math.min(3, attacker.momentum + 1);
+    if (attacker.momentum > 0) state.log.push(`Momentum: ${attacker.momentum}`);
     return;
   }
 
-  // Calculate damage — mostly stamina drain, minimal HP damage
-  // In BJJ, takedowns/passes score points and tire your opponent, they don't "hurt" them
-  // Only sustained pressure from dominant positions drains meaningful HP
-  const chained2 = isChained(attacker.lastMoveId, move);
-  const { damage, isCrit } = calculateDamage(attacker, defender, move, state.position, attackerRole, chained2);
+  // ── GUARD RETENTION CHECK (for pass moves) ──
+  if (move.category === 'pass') {
+    const retention = rollGuardRetention(attacker, defender, move);
+    if (retention === 'stuffed') {
+      state.log.push(`${defenderName} retains guard! Pass stuffed!`);
+      awardAdvantage(state, attackerIs, `near-pass (${move.name})`);
+      attacker.lastMoveId = move.id;
+      if (attacker.momentum > 0) { attacker.momentum = 0; state.log.push(`Momentum reset!`); }
+      return;
+    }
+    if (retention === 'partial-pass') {
+      state.log.push(`Partial pass — caught in half guard!`);
+      // Override to half-guard instead of the move's intended position
+      state.position = 'half-guard';
+      state.topFighter = attackerIs;
+      const newRole = getRole(state.position, state.topFighter, attackerIs);
+      state.log.push(`Position: ${getPositionDisplayName(state.position, newRole)}`);
+      // Still award pass points (you did advance)
+      awardPositionPoints(state, { ...move, resultPosition: 'half-guard' }, attackerIs, oldPosition);
+      attacker.lastMoveId = move.id;
+      attacker.momentum = Math.min(3, attacker.momentum + 1);
+      if (attacker.momentum > 0) state.log.push(`Momentum: ${attacker.momentum}`);
+      // Apply stamina drain
+      const { damage } = calculateDamage(attacker, defender, move, state.position, attackerRole, chained, attacker.momentum);
+      if (damage > 0) deductStamina(defender, Math.floor(damage * 0.3));
+      return;
+    }
+    // clean-pass: fall through to normal resolution
+  }
+
+  // ── CALCULATE DAMAGE ──
+  const { damage, isCrit } = calculateDamage(attacker, defender, move, state.position, attackerRole, chained, attacker.momentum);
   if (damage > 0) {
-    // Stamina drain = main effect (pressure, grinding)
     const staminaDrain = Math.floor(damage * 0.5);
     deductStamina(defender, staminaDrain);
 
-    // HP damage is much smaller — only accumulates over many turns
-    // Takedowns/sweeps/passes = position moves, not damage moves
-    const hpDamage = move.category === 'submission'
-      ? damage                       // subs deal full HP damage
-      : Math.floor(damage * 0.15);   // everything else is mostly positional
+    const hpDamage = move.category === 'submission' ? damage : Math.floor(damage * 0.15);
     defender.currentHp = Math.max(0, defender.currentHp - hpDamage);
 
     const critText = isCrit ? ' CRITICAL!' : '';
@@ -313,70 +314,68 @@ function executeMove(
     if (effText) state.log.push(effText);
   }
 
-  // Position change + point scoring
+  // ── POSITION CHANGE + POINTS ──
   if (move.resultPosition) {
     state.position = move.resultPosition;
-    if (move.resultRole === 'top') {
-      state.topFighter = attackerIs;
-    } else if (move.resultRole === 'bottom') {
-      state.topFighter = attackerIs === 'player' ? 'opponent' : 'player';
-    } else if (move.resultRole === 'neutral') {
-      state.topFighter = null;
-    }
+    if (move.resultRole === 'top') state.topFighter = attackerIs;
+    else if (move.resultRole === 'bottom') state.topFighter = attackerIs === 'player' ? 'opponent' : 'player';
+    else if (move.resultRole === 'neutral') state.topFighter = null;
 
     const newRole = getRole(state.position, state.topFighter, attackerIs);
     state.log.push(`Position: ${getPositionDisplayName(state.position, newRole)}`);
-
-    // Award points for the position change
     awardPositionPoints(state, move, attackerIs, oldPosition);
   }
 
-  attacker.lastMoveId = move.id;
+  // ── IMPACT (flinch + recoil) ──
+  if (move.impact && move.resultPosition) {
+    // Recoil: extra stamina cost to attacker
+    if (move.impact.recoil > 0) deductStamina(attacker, move.impact.recoil);
+    // Flinch chance
+    if (Math.random() < move.impact.flinchChance) {
+      defender.flinched = true;
+      state.log.push(`${defenderName} is STUNNED from the impact!`);
+    }
+  }
 
-  // Check referee stoppage (HP = 0 means fighter is completely exhausted)
+  // ── MOMENTUM UPDATE ──
+  attacker.momentum = Math.min(3, attacker.momentum + 1);
+  attacker.lastMoveId = move.id;
+  if (attacker.momentum >= 2) state.log.push(`Momentum: ${attacker.momentum}${attacker.momentum === 3 ? ' — IN THE ZONE!' : ''}`);
+
+  // ── REF STOPPAGE ──
   if (defender.currentHp <= 0) {
     state.winner = attackerIs;
-    state.winMethod = 'submission'; // ref stoppage counts as sub
+    state.winMethod = 'submission';
     state.phase = 'battle-over';
-    state.log.push(`${defender.grappler.name} can't continue! Referee stoppage!`);
+    state.log.push(`${defenderName} can't continue! Referee stoppage!`);
   }
 }
 
 // ── AI move selection ──
 function pickAIMove(state: BattleState): Move {
   const legal = getLegalMoves(state, 'opponent');
-  // Filter out stall from AI options unless it's the only choice
   const nonStall = legal.filter(m => m.id !== '__stall__');
   const candidates = nonStall.length > 0 ? nonStall : legal;
-
   const affordable = candidates.filter(m => state.opponent.currentStamina >= m.staminaCost);
   if (affordable.length === 0) return STALL_MOVE;
 
   const posData = POSITIONS[state.position];
   const role = getRole(state.position, state.topFighter, 'opponent');
-
-  // Factor in score — if ahead on points near end, play conservative
   const turnsLeft = state.maxTurns - state.turn;
   const scoreDiff = state.opponentPoints - state.playerPoints;
   const isAhead = scoreDiff > 0;
 
   const scored = affordable.map(move => {
     let score = move.power + move.accuracy * 0.3;
-
     if (move.category === 'submission') {
-      if (role === 'top' && (posData.advantage === 'dominant-top' || posData.advantage === 'top')) score += 40;
-      else score += 15;
-      // If ahead on points near end, less aggressive with risky subs
+      score += (role === 'top' && (posData.advantage === 'dominant-top' || posData.advantage === 'top')) ? 40 : 15;
       if (isAhead && turnsLeft <= 4) score -= 20;
     }
     if (move.category === 'escape' && role === 'bottom') {
-      if (posData.advantage === 'dominant-top') score += 50;
-      else if (posData.advantage === 'top') score += 35;
+      score += posData.advantage === 'dominant-top' ? 50 : posData.advantage === 'top' ? 35 : 15;
     }
-    // If behind, prioritize scoring moves
-    if (!isAhead && turnsLeft <= 4) {
-      if (move.category === 'takedown' || move.category === 'sweep' || move.category === 'pass') score += 25;
-    }
+    if (move.category === 'setup') score += 25; // AI values setup moves
+    if (!isAhead && turnsLeft <= 4 && (move.category === 'takedown' || move.category === 'sweep' || move.category === 'pass')) score += 25;
     if (isChained(state.opponent.lastMoveId, move)) score += 20;
     if (state.opponent.currentStamina < state.opponent.maxStamina * 0.3) score -= move.staminaCost * 2;
     score += (Math.random() - 0.5) * 30;
@@ -394,55 +393,40 @@ function resolveByPoints(state: BattleState): void {
   state.log.push(`Score: You ${state.playerPoints} - ${state.opponentPoints} Opponent`);
   state.log.push(`Advantages: You ${state.playerAdvantages} - ${state.opponentAdvantages} Opponent`);
 
-  if (state.playerPoints > state.opponentPoints) {
-    state.winner = 'player';
-    state.winMethod = 'points';
-    state.log.push(`You win on POINTS!`);
-  } else if (state.opponentPoints > state.playerPoints) {
-    state.winner = 'opponent';
-    state.winMethod = 'points';
-    state.log.push(`${state.opponent.grappler.name} wins on POINTS!`);
-  } else if (state.playerAdvantages > state.opponentAdvantages) {
-    state.winner = 'player';
-    state.winMethod = 'advantages';
-    state.log.push(`You win on ADVANTAGES!`);
-  } else if (state.opponentAdvantages > state.playerAdvantages) {
-    state.winner = 'opponent';
-    state.winMethod = 'advantages';
-    state.log.push(`${state.opponent.grappler.name} wins on ADVANTAGES!`);
-  } else {
-    // True draw
-    state.winner = null;
-    state.winMethod = 'draw';
-    state.log.push(`DRAW! No winner.`);
-  }
+  if (state.playerPoints > state.opponentPoints) { state.winner = 'player'; state.winMethod = 'points'; state.log.push('You win on POINTS!'); }
+  else if (state.opponentPoints > state.playerPoints) { state.winner = 'opponent'; state.winMethod = 'points'; state.log.push(`${state.opponent.grappler.name} wins on POINTS!`); }
+  else if (state.playerAdvantages > state.opponentAdvantages) { state.winner = 'player'; state.winMethod = 'advantages'; state.log.push('You win on ADVANTAGES!'); }
+  else if (state.opponentAdvantages > state.playerAdvantages) { state.winner = 'opponent'; state.winMethod = 'advantages'; state.log.push(`${state.opponent.grappler.name} wins on ADVANTAGES!`); }
+  else { state.winner = null; state.winMethod = 'draw'; state.log.push('DRAW! No winner.'); }
 }
 
-// ── Main turn execution — SEQUENTIAL, not simultaneous ──
+// ── Main turn execution ──
 export function executeTurn(state: BattleState, playerMoveId: string): BattleState {
   const s = { ...state, log: [...state.log] };
   const playerMove = playerMoveId === '__stall__' ? STALL_MOVE : getMove(playerMoveId);
   if (!playerMove) return s;
 
+  // Fatigue phase announcement (on phase change)
+  const fatigue = getFatiguePhase(s.turn, s.player.stats.end);
+  if (s.turn === 4) s.log.push(`⚡ BURN PHASE — stamina costs increasing!`);
+  if (s.turn === 7 || (s.player.stats.end > 35 && s.turn === 6)) s.log.push(`💨 SECOND WIND!`);
+  if (s.turn === 10) s.log.push(`⚡ GRIND — deep waters now.`);
+
   const turnsRemaining = s.maxTurns - s.turn + 1;
-  s.log.push(`--- Turn ${s.turn} (${turnsRemaining} remaining) ---`);
+  s.log.push(`--- Turn ${s.turn} (${turnsRemaining} remaining) [${fatigue}] ---`);
   s.firstActor = computeFirstActor(s);
 
-  if (s.firstActor === 'opponent') {
-    s.log.push(`${s.opponent.grappler.name} has initiative!`);
-  }
+  if (s.firstActor === 'opponent') s.log.push(`${s.opponent.grappler.name} has initiative!`);
 
   if (s.firstActor === 'player') {
     executeMove(s, s.player, s.opponent, playerMove, 'player');
     if (s.phase === 'battle-over') return finishTurn(s);
-
     const aiMove = pickAIMove(s);
     executeMove(s, s.opponent, s.player, aiMove, 'opponent');
   } else {
     const aiMove = pickAIMove(s);
     executeMove(s, s.opponent, s.player, aiMove, 'opponent');
     if (s.phase === 'battle-over') return finishTurn(s);
-
     executeMove(s, s.player, s.opponent, playerMove, 'player');
   }
 
@@ -453,15 +437,26 @@ function finishTurn(state: BattleState): BattleState {
   if (state.phase !== 'battle-over') {
     const playerRole = getRole(state.position, state.topFighter, 'player');
     const opponentRole = getRole(state.position, state.topFighter, 'opponent');
-    recoverStamina(state.player, state.position, playerRole === 'top');
-    recoverStamina(state.opponent, state.position, opponentRole === 'top');
-    state.turn++;
 
-    // Check if match time is up
-    if (state.turn > state.maxTurns) {
-      resolveByPoints(state);
-      return state;
+    // Fatigue-adjusted recovery
+    const fatigue = getFatiguePhase(state.turn, state.player.stats.end);
+    const fatigueMods = getFatigueModifiers(fatigue);
+
+    recoverStamina(state.player, state.position, playerRole === 'top', fatigueMods.recoveryMod);
+    recoverStamina(state.opponent, state.position, opponentRole === 'top', fatigueMods.recoveryMod);
+
+    // Decrement setup bonuses
+    if (state.player.setupBonus) {
+      state.player.setupBonus.turnsRemaining--;
+      if (state.player.setupBonus.turnsRemaining <= 0) { state.player.setupBonus = null; }
     }
+    if (state.opponent.setupBonus) {
+      state.opponent.setupBonus.turnsRemaining--;
+      if (state.opponent.setupBonus.turnsRemaining <= 0) { state.opponent.setupBonus = null; }
+    }
+
+    state.turn++;
+    if (state.turn > state.maxTurns) { resolveByPoints(state); return state; }
 
     state.phase = 'select-move';
     state.firstActor = computeFirstActor(state);

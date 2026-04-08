@@ -15,7 +15,10 @@ export type Position =
 export type PositionRole = 'top' | 'bottom' | 'neutral';
 
 // ── Move categories ──
-export type MoveCategory = 'takedown' | 'sweep' | 'pass' | 'submission' | 'escape' | 'transition';
+export type MoveCategory = 'takedown' | 'sweep' | 'pass' | 'submission' | 'escape' | 'transition' | 'setup';
+
+// ── Frame (weight class) ──
+export type Frame = 'light' | 'medium' | 'heavy';
 
 // ── Stat keys ──
 export type StatKey = 'str' | 'tec' | 'tgh' | 'flx' | 'spd' | 'end';
@@ -77,6 +80,8 @@ export interface Move {
   statDefense: StatKey;
   chainPotential: string[];
   description: string;
+  impact?: { flinchChance: number; recoil: number };
+  setupBonus?: { accuracyMod: number; damageMod: number; critMod: number; duration: number };
 }
 
 // ── Grappler (the "Pokemon") ──
@@ -91,6 +96,7 @@ export interface Grappler {
   evs: EVs;
   moves: string[];         // equipped move IDs (limited by belt slots)
   learnedMoves: string[];  // all moves ever learned (full pool)
+  frame: Frame;
   giColor?: string;
   gymName?: string;
   coachName?: string;
@@ -105,6 +111,14 @@ export interface BattleGrappler {
   maxStamina: number;
   isGassed: boolean;
   lastMoveId: string | null;
+  momentum: number;          // 0-3, builds on consecutive successful moves
+  flinched: boolean;         // forced to stall next turn (from impact move)
+  setupBonus: {              // active buff from a grip/setup move
+    turnsRemaining: number;
+    accuracyMod: number;
+    damageMod: number;
+    critMod: number;
+  } | null;
 }
 
 // ── Shared position data ──
@@ -221,6 +235,8 @@ export interface PlayerProgression {
   currentRegionId: string;
   storyFlags: Record<string, boolean>;
   npcDefeated: Record<string, boolean>;
+  npcScouted: Record<string, boolean>;
+  trainingSessions: number;
   totalWins: number;
   totalLosses: number;
 }
