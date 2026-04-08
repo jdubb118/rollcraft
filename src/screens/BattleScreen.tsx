@@ -106,6 +106,13 @@ export default function BattleScreen() {
     if (line.includes('DRAW')) return '#888';
     if (line.includes('initiative')) return '#ef4444';
     if (line.includes('no longer valid')) return '#ef4444';
+    if (line.includes('LOCKED IN') || line.includes('VERY TIGHT')) return '#ff6b6b';
+    if (line.includes('TIGHT') || line.includes('tightening')) return '#ff9800';
+    if (line.includes('SLIPPING') || line.includes('DEFENDED')) return '#3b82f6';
+    if (line.includes('ALMOST HAD IT')) return '#ff9800';
+    if (line.includes('Phase ') && line.includes('/3')) return '#888';
+    if (line.includes('[█') || line.includes('[░')) return '#aaa';
+    if (line.includes('try again')) return '#ffd700';
     return '#aaa';
   }
 
@@ -178,15 +185,17 @@ export default function BattleScreen() {
           className="no-scrollbar"
           style={{
             fontSize: '0.38rem', padding: '2px 10px',
-            maxHeight: 72, overflowY: 'auto', lineHeight: 1.7,
+            maxHeight: 100, overflowY: 'auto', lineHeight: 1.7,
             background: '#0d0d1a', borderTop: '1px solid #222', borderBottom: '1px solid #222',
           }}
         >
-          {state.log.slice(-8).map((line, i) => (
-            <div key={i} style={{ color: getLogColor(line) }}>
-              {line}
-            </div>
-          ))}
+          {state.log.slice(-8).flatMap((line, i) =>
+            line.split('\n').map((subline, j) => (
+              <div key={`${i}-${j}`} style={{ color: getLogColor(subline) }}>
+                {subline}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Position indicator */}
