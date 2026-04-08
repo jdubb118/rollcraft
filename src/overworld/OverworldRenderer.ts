@@ -105,17 +105,44 @@ export function renderOverworld(
     ctx.drawImage(s.canvas, s.x, s.y);
   }
 
-  // Interaction prompt (if facing an NPC)
-  if (state.interactingNPC === null) {
-    // Draw a small "!" above NPCs near the player
-    for (const npc of state.npcs) {
-      const dist = Math.abs(npc.col - p.col) + Math.abs(npc.row - p.row);
-      if (dist === 1) {
-        ctx.fillStyle = '#ffd700';
-        ctx.font = '8px "Press Start 2P", monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('!', npc.col * TILE_SIZE + 8, npc.row * TILE_SIZE - 6);
+  // NPC labels + interaction prompts
+  const BELT_LABEL_COLORS: Record<string, string> = {
+    white: '#ffffff', blue: '#4488ff', purple: '#aa55ff', brown: '#cc8844', black: '#888888',
+  };
+
+  for (const npc of state.npcs) {
+    const nx = npc.col * TILE_SIZE + 8;
+    const ny = npc.row * TILE_SIZE;
+
+    // Always show name + belt above NPC
+    ctx.textAlign = 'center';
+    ctx.font = '4px "Press Start 2P", monospace';
+    const beltColor = BELT_LABEL_COLORS[npc.def.belt] || '#888';
+
+    // Belt indicator dot
+    ctx.fillStyle = beltColor;
+    ctx.fillRect(nx - 2, ny - 10, 4, 4);
+
+    // Name (short)
+    ctx.fillStyle = '#ccc';
+    ctx.font = '4px "Press Start 2P", monospace';
+    ctx.fillText(npc.def.name.substring(0, 8), nx, ny - 12);
+
+    // Role icon for training partners
+    if (npc.def.role === 'training-partner') {
+      // Show if defeated
+      if (npc.defeated) {
+        ctx.fillStyle = '#22c55e44';
+        ctx.fillText('✓', nx + 20, ny - 10);
       }
+    }
+
+    // "!" prompt when adjacent
+    const dist = Math.abs(npc.col - p.col) + Math.abs(npc.row - p.row);
+    if (dist === 1 && state.interactingNPC === null) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.fillText('!', nx, ny - 18);
     }
   }
 }

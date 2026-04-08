@@ -1,4 +1,5 @@
 import type { Move, BattleGrappler, Stats, StatKey } from '../engine/types';
+import { getLevel } from './stats';
 import { getStyleEffectiveness } from '../data/styles';
 import { POSITIONS } from '../data/positions';
 import type { Position } from '../engine/types';
@@ -16,10 +17,7 @@ export function calculateDamage(
 ): number {
   if (move.power === 0) return 0;
 
-  const level = attacker.grappler.belt === 'white' ? 10
-    : attacker.grappler.belt === 'blue' ? 25
-    : attacker.grappler.belt === 'purple' ? 40
-    : attacker.grappler.belt === 'brown' ? 55 : 70;
+  const level = getLevel(attacker.grappler);
 
   const A = getStat(attacker.stats, move.statAttack);
   const D = Math.max(1, getStat(defender.stats, move.statDefense));

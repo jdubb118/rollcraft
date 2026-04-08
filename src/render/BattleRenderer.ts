@@ -2,6 +2,7 @@ import type { BattleState } from '../engine/types';
 import { getGrapplerSprite, getPlayerSprite, SPRITE_W, SPRITE_H } from './SpriteData';
 import { POSITIONS } from '../data/positions';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
+import { getLevel } from '../battle/stats';
 
 const MAT_COLOR = '#1a4a2a';
 const MAT_BORDER = '#0d2e18';
@@ -89,13 +90,13 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
 
   // Opponent HUD (top area)
   drawPixelText(ctx, state.opponent.grappler.name.substring(0, 12).toUpperCase(), 10, 8, 8, '#fff');
-  drawPixelText(ctx, `Lv${getBeltLevel(state.opponent)}`, CANVAS_WIDTH - 50, 8, 7, '#aaa');
+  drawPixelText(ctx, `Lv${getLevel(state.opponent.grappler)}`, CANVAS_WIDTH - 50, 8, 7, '#aaa');
   drawBar(ctx, 10, 22, 140, 8, state.opponent.currentHp, state.opponent.stats.maxHp, '#22c55e', '#333');
   drawBar(ctx, 10, 33, 140, 6, state.opponent.currentStamina, state.opponent.maxStamina, '#3b82f6', '#333');
 
   // Player HUD (bottom area)
   drawPixelText(ctx, state.player.grappler.name.substring(0, 12).toUpperCase(), CANVAS_WIDTH - 155, CANVAS_HEIGHT - 45, 8, '#fff');
-  drawPixelText(ctx, `Lv${getBeltLevel(state.player)}`, CANVAS_WIDTH - 50, CANVAS_HEIGHT - 45, 7, '#aaa');
+  drawPixelText(ctx, `Lv${getLevel(state.player.grappler)}`, CANVAS_WIDTH - 50, CANVAS_HEIGHT - 45, 7, '#aaa');
   drawBar(ctx, CANVAS_WIDTH - 155, CANVAS_HEIGHT - 30, 140, 8, state.player.currentHp, state.player.stats.maxHp, '#22c55e', '#333');
   drawBar(ctx, CANVAS_WIDTH - 155, CANVAS_HEIGHT - 19, 140, 6, state.player.currentStamina, state.player.maxStamina, '#3b82f6', '#333');
 
@@ -104,7 +105,3 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   drawPixelText(ctx, posName.toUpperCase(), CANVAS_WIDTH / 2 - posName.length * 3, CANVAS_HEIGHT / 2 + 50, 7, '#ffd700');
 }
 
-function getBeltLevel(fighter: { grappler: { belt: string } }): number {
-  const levels: Record<string, number> = { white: 10, blue: 25, purple: 40, brown: 55, black: 70 };
-  return levels[fighter.grappler.belt] || 10;
-}

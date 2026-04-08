@@ -27,19 +27,19 @@ export type StatKey = 'str' | 'tec' | 'tgh' | 'flx' | 'spd' | 'end';
 export type Belt = 'white' | 'blue' | 'purple' | 'brown' | 'black';
 
 export const BELT_LEVELS: Record<Belt, number> = {
-  white: 10,
-  blue: 25,
-  purple: 40,
-  brown: 55,
-  black: 70,
+  white: 1,
+  blue: 15,
+  purple: 30,
+  brown: 45,
+  black: 60,
 };
 
 export const BELT_XP_THRESHOLDS: Record<Belt, number> = {
   white: 0,
-  blue: 500,
-  purple: 2000,
-  brown: 5000,
-  black: 12000,
+  blue: 1500,
+  purple: 5000,
+  brown: 12000,
+  black: 25000,
 };
 
 export const BELT_MOVE_SLOTS: Record<Belt, number> = {
