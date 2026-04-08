@@ -12,7 +12,7 @@ export interface PlayerOverworld {
   targetRow: number;
 }
 
-export type NPCRole = 'instructor' | 'training-partner' | 'professor';
+export type NPCRole = 'instructor' | 'training-partner' | 'professor' | 'tournament-desk';
 
 export interface NPCDef {
   id: string;
@@ -37,6 +37,7 @@ export interface NPCDef {
   baseStats?: BaseStats;
   evSpread?: EVs;
   frame?: Frame;
+  tournamentId?: string;
 }
 
 export interface NPCState {

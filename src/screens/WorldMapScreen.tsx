@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { REGIONS } from '../data/world';
 import { isRegionUnlocked } from '../data/world';
-import { loadPlayer, loadProgression } from '../state/saveLoad';
+import { loadPlayer, loadProgression, updateProgression, spendMoney } from '../state/saveLoad';
 import { STYLE_NAMES } from '../engine/constants';
+import { getRegionMap } from '../overworld/maps/registry';
 
 // Region positions on the visual map (percentage-based)
 const REGION_POSITIONS: Record<string, { x: number; y: number }> = {
@@ -46,14 +47,22 @@ export default function WorldMapScreen() {
     const unlocked = isRegionUnlocked(regionId, player.belt, progression.stamps, tournamentWins, npcWinCount);
     if (!unlocked) return;
 
-    // Navigate to overworld with this region
-    // For now, only home gym has a tile map
-    if (regionId === 'home') {
-      navigate('/overworld');
-    } else {
-      // Future: navigate to specific region overworld
-      navigate('/overworld'); // placeholder — all regions use home gym map for now
+    // Check if region has a map
+    const regionMap = getRegionMap(regionId);
+    if (!regionMap) return; // region not built yet
+
+    // Pay drop-in fee if visiting (not home gym)
+    if (regionMap.dropInFee > 0 && regionId !== progression.currentRegionId) {
+      if (progression.money < regionMap.dropInFee) {
+        alert(`Drop-in fee: $${regionMap.dropInFee} Mat Bucks. You have $${progression.money}.`);
+        return;
+      }
+      spendMoney(regionMap.dropInFee);
     }
+
+    // Save current region and navigate
+    updateProgression({ currentRegionId: regionId });
+    navigate('/overworld');
   };
 
   return (
@@ -66,15 +75,15 @@ export default function WorldMapScreen() {
         <button
           onClick={() => navigate('/overworld')}
           style={{
-            padding: '4px 10px', background: '#1a1a2e', color: '#888',
-            fontSize: '0.35rem', border: '1px solid #444',
+            padding: '6px 12px', background: '#1a1a2e', color: '#888',
+            fontSize: 'var(--fs-xs)', border: '1px solid #444',
           }}
         >
           BACK
         </button>
-        <span style={{ fontSize: '0.45rem', color: '#ffd700' }}>WORLD MAP</span>
-        <span style={{ fontSize: '0.3rem', color: '#888' }}>
-          {progression.stamps.length}/8 STAMPS | {progression.money} MB
+        <span style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }}>WORLD MAP</span>
+        <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
+          {progression.stamps.length}/8 STAMPS | ${progression.money}
         </span>
       </div>
 
@@ -155,16 +164,16 @@ export default function WorldMapScreen() {
                 </div>
               )}
 
-              <span style={{ fontSize: '0.25rem', fontWeight: 'bold', textAlign: 'center', lineHeight: 1.3 }}>
+              <span style={{ fontSize: 7, fontWeight: 'bold', textAlign: 'center', lineHeight: 1.3 }}>
                 {region.name.toUpperCase()}
               </span>
               {region.styleSpecialty && unlocked && (
-                <span style={{ fontSize: '0.2rem', color: region.color }}>
+                <span style={{ fontSize: 6, color: region.color }}>
                   {STYLE_NAMES[region.styleSpecialty]}
                 </span>
               )}
               {!unlocked && (
-                <span style={{ fontSize: '0.18rem', color: '#666' }}>LOCKED</span>
+                <span style={{ fontSize: 6, color: '#666' }}>LOCKED</span>
               )}
             </button>
           );

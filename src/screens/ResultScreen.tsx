@@ -102,7 +102,13 @@ export default function ResultScreen() {
     if (isWin) recordWin();
     else if (!isDraw) recordLoss();
     addMoney(moneyEarned);
-    navigate('/overworld');
+
+    // If in a tournament, return to tournament bracket
+    if (result.tournamentId) {
+      navigate(`/tournament?id=${result.tournamentId}`);
+    } else {
+      navigate('/overworld');
+    }
   };
 
   const currentXp = player.xp;

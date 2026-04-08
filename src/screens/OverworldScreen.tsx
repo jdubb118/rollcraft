@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
-import { STARTER_GYM, PLAYER_SPAWN, STARTER_GYM_NPCS } from '../overworld/maps/starterGym';
+import { getRegionMap } from '../overworld/maps/registry';
 import { createOverworldState, updateOverworld, getFacingNPC } from '../overworld/OverworldEngine';
 import { renderOverworld } from '../overworld/OverworldRenderer';
 import type { OverworldState, Direction, MenuOption, NPCState } from '../overworld/overworldTypes';
@@ -52,6 +52,8 @@ export default function OverworldScreen() {
   const [dialogueText, setDialogueText] = useState<string>('');
   const [menuOptions, setMenuOptions] = useState<MenuOption[] | null>(null);
   const [menuIndex, setMenuIndex] = useState(0);
+  const [currentRegionId, setCurrentRegionId] = useState('home');
+  const regionRef = useRef(getRegionMap('home')!);
   const navigate = useNavigate();
 
   // ── Single dispatch ref — keyboard always calls the latest version ──
@@ -62,7 +64,12 @@ export default function OverworldScreen() {
     const p = loadPlayer();
     if (!p) { navigate('/create'); return; }
     setPlayer(p);
-    stateRef.current = createOverworldState(PLAYER_SPAWN.col, PLAYER_SPAWN.row, STARTER_GYM_NPCS);
+    const prog = loadProgression();
+    const regionId = prog.currentRegionId || 'home';
+    const region = getRegionMap(regionId) || getRegionMap('home')!;
+    regionRef.current = region;
+    setCurrentRegionId(regionId);
+    stateRef.current = createOverworldState(region.playerSpawn.col, region.playerSpawn.row, region.npcs);
   }, [navigate]);
 
   // Game loop
@@ -79,13 +86,27 @@ export default function OverworldScreen() {
       lastTime = time;
 
       const state = stateRef.current!;
+      const tileMap = regionRef.current.tileMap;
       if (!state.interactingNPC) {
-        updateOverworld(state, STARTER_GYM, inputRef.current, dt);
+        updateOverworld(state, tileMap, inputRef.current, dt);
+
+        // Check exit tiles
+        const p = state.player;
+        if (!p.isMoving) {
+          for (const exit of regionRef.current.exits) {
+            if (p.col === exit.col && p.row === exit.row) {
+              if (exit.targetRegion === '__world_map__') {
+                navigate('/world');
+                return;
+              }
+            }
+          }
+        }
       }
 
       const ctx = canvasRef.current!.getContext('2d')!;
       ctx.imageSmoothingEnabled = false;
-      renderOverworld(ctx, state, STARTER_GYM, player.giColor, player.belt, player.coachName);
+      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName);
 
       rafId = requestAnimationFrame(frame);
     };
@@ -277,6 +298,10 @@ export default function OverworldScreen() {
 
     } else if (action === 'exam') {
       showText("You need more mat time before your next belt. Keep training.");
+    } else if (action.startsWith('enter-tournament:')) {
+      const tourneyId = action.replace('enter-tournament:', '');
+      dismiss();
+      navigate(`/tournament?id=${tourneyId}`);
     }
   }
 
@@ -323,6 +348,9 @@ export default function OverworldScreen() {
     if (npc.def.role === 'instructor' && npc.def.teachableMoves) {
       options.push({ label: 'LEARN A MOVE', action: 'learn' });
       options.push({ label: 'TRAIN STATS', action: 'train' });
+    }
+    if (npc.def.role === 'tournament-desk' && npc.def.tournamentId) {
+      options.push({ label: 'ENTER TOURNAMENT', action: `enter-tournament:${npc.def.tournamentId}` });
     }
     if (npc.def.role === 'professor' && player) {
       const beltIdx = BELTS.indexOf(player.belt);

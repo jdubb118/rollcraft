@@ -187,6 +187,7 @@ export interface BattleResult {
   opponentStyle: Style;
   playerPoints?: number;
   opponentPoints?: number;
+  tournamentId?: string;
 }
 
 // ── World / Region system ──

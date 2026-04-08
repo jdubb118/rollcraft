@@ -64,6 +64,10 @@ export default function BattleScreen() {
       // Mark opponent as scouted (now you know their tendencies)
       markScouted(newState.opponent.grappler.name);
 
+      // Check if this is a tournament match
+      const activeTourneyId = localStorage.getItem('rollcraft-active-tourney-id');
+      if (activeTourneyId) localStorage.removeItem('rollcraft-active-tourney-id');
+
       saveBattleResult({
         winner: newState.winner ?? 'draw',
         method: newState.winMethod ?? 'points',
@@ -74,6 +78,7 @@ export default function BattleScreen() {
         opponentStyle: newState.opponent.grappler.style,
         playerPoints: newState.playerPoints,
         opponentPoints: newState.opponentPoints,
+        tournamentId: activeTourneyId || undefined,
       });
     }
   }, [state, navigate]);
