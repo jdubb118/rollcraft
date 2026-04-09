@@ -835,6 +835,14 @@ export const MOVES: Move[] = [
     power: 5, accuracy: 80, staminaCost: 10, statAttack: 'tec', statDefense: 'str',
     chainPotential: ['lockdown', 'deep-half-sweep'], description: 'Frame with the arms. Systematic escape.',
   },
+  // ═══ UNIVERSAL DEFENSE MOVES ═══
+  {
+    id: 'leg-extract', name: 'Boot & Scoot', category: 'escape', style: 'controller',
+    posReq: [neu('leg-entanglement')], resultPosition: 'standing', resultRole: 'neutral',
+    power: 5, accuracy: 65, staminaCost: 14, statAttack: 'str', statDefense: 'tec',
+    chainPotential: ['double-leg', 'single-leg'], description: 'Push the hips, extract the leg, scramble to feet.',
+  },
+
   // ═══ GAP-FILLING MOVES — weak positions ═══
 
   // ── Closed Guard Top (only had posture-up + guard-break) ──

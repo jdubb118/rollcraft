@@ -50,29 +50,33 @@ export default function BattleScreen() {
 
     // Execute the full turn
     const newState = executeTurn(state, moveId);
-
-    // Find where the turn divider is in the log to split player vs opponent
     const oldLogLen = state.log.length;
     const newLines = newState.log.slice(oldLogLen);
-    const dividerIdx = newLines.findIndex(l => l.includes('has initiative'));
-    const splitPoint = dividerIdx >= 0 ? Math.floor(newLines.length / 2) : Math.floor(newLines.length / 2);
 
-    // Phase 1: show first half of the turn (first actor's move)
-    const phase1State = {
-      ...newState,
-      log: [...state.log, ...newLines.slice(0, Math.max(1, splitPoint))],
-      phase: 'animating' as const,
-    };
-    setState(phase1State);
+    // Drip-feed log lines with delays for readable pacing
+    // Find the split between first actor and second actor
+    let splitIdx = 0;
+    for (let i = 1; i < newLines.length; i++) {
+      if (newLines[i].includes('attempts') || newLines[i].includes('SPAZ') || newLines[i].includes('stalls') || newLines[i].includes('is stunned')) {
+        splitIdx = i;
+        break;
+      }
+    }
+    if (splitIdx === 0) splitIdx = newLines.length;
+
+    // Phase 1: first actor's moves (immediate)
+    const phase1 = { ...newState, log: [...state.log, ...newLines.slice(0, splitIdx)], phase: 'animating' as const };
+    setState(phase1);
     setAnimFrame(1);
-    setTimeout(() => setAnimFrame(0), 200);
+    setTimeout(() => setAnimFrame(0), 250);
 
-    // Phase 2: show full result after a pause
+    // Phase 2: second actor's moves (after delay)
+    const delay = Math.min(1200, 400 + splitIdx * 150); // longer pause for more lines
     setTimeout(() => {
       setState(newState);
       setAnimFrame(2);
-      setTimeout(() => setAnimFrame(0), 200);
-    }, 800);
+      setTimeout(() => setAnimFrame(0), 250);
+    }, delay);
 
     if (newState.phase === 'battle-over') {
       const isWin = newState.winner === 'player';

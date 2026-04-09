@@ -196,8 +196,9 @@ function executeMove(
     deductStamina(attacker, cost);
     state.log.push(`${attackerName} SPAZZES OUT! Explosive scramble!`);
 
-    // Accuracy check — SPD vs TEC
-    const acc = 55 + (attacker.isGassed ? -20 : 0);
+    // Accuracy check — SPD vs TEC. Higher in leg entanglement (survival instinct)
+    const baseAcc = state.position === 'leg-entanglement' ? 70 : 55;
+    const acc = baseAcc + (attacker.isGassed ? -20 : 0);
     if (Math.random() * 100 > acc) {
       state.log.push(`Wild scramble goes nowhere!`);
       if (attacker.momentum > 0) { attacker.momentum = 0; }
