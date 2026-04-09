@@ -76,7 +76,7 @@ export const REGIONS: WorldRegion[] = [
     styleSpecialty: null, stampId: null, stampName: null,
     unlockRequirements: [
       { type: 'belt', value: 'black', label: 'Black belt required' },
-      { type: 'stamp-count', value: 8, label: 'All 8 stamps collected' },
+      { type: 'stamp-count', value: 7, label: 'All 7 stamps collected' },
     ],
     color: '#ffd700',
   },

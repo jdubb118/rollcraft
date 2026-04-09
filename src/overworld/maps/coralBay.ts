@@ -39,6 +39,13 @@ export const CORAL_BAY_NPCS: NPCDef[] = [
     frame: 'light',
   },
   {
+    id: 'cb-tourney', name: 'Tournament Desk', role: 'tournament-desk',
+    style: 'controller', belt: 'black', moves: [],
+    dialogue: { greeting: "Coral Bay Pro. 16-person bracket. Purple to Black. Entry: $250." },
+    position: { col: 16, row: 4 }, wanders: false,
+    tournamentId: 'coral-bay-pro',
+  },
+  {
     id: 'cb-kai', name: 'Kai', role: 'training-partner',
     style: 'guard-player', belt: 'purple',
     moves: ['pull-guard', 'sleeve-control', 'triangle', 'armbar-guard', 'x-guard-sweep', 'butterfly-sweep', 'omoplata'],

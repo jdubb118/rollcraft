@@ -104,10 +104,13 @@ export function generateBracket(tournament: Tournament, playerName: string): Gra
     // Pick random archetype
     const arch = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)];
 
-    // Pick a name
+    // Pick a name (with safety valve to prevent infinite loop)
     let name: string;
+    let attempts = 0;
     do {
       name = OPPONENT_NAMES[Math.floor(Math.random() * OPPONENT_NAMES.length)];
+      attempts++;
+      if (attempts > 50) { name = `Fighter ${i + 1}`; break; }
     } while (usedNames.has(name));
     usedNames.add(name);
 

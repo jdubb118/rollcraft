@@ -87,7 +87,7 @@ export default function WorldMapScreen() {
         </button>
         <span style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }}>WORLD MAP</span>
         <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
-          {progression.stamps.length}/8 STAMPS | ${progression.money}
+          {progression.stamps.length}/7 STAMPS | ${progression.money}
         </span>
       </div>
 
