@@ -193,6 +193,22 @@ export default function BattleScreen() {
       className="safe-bottom"
       >
         {/* Battle log */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => {
+              const text = state.log.join('\n');
+              navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copy-log-btn');
+                if (btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '📋', 1000); }
+              });
+            }}
+            id="copy-log-btn"
+            style={{
+              position: 'absolute', top: 4, right: 8, zIndex: 5,
+              background: 'none', border: 'none', color: '#444',
+              fontSize: 12, cursor: 'pointer', padding: 2,
+            }}
+          >📋</button>
         <div
           ref={logRef}
           className="no-scrollbar"
@@ -210,6 +226,7 @@ export default function BattleScreen() {
               </div>
             ))
           )}
+        </div>
         </div>
 
         {/* Position indicator */}
