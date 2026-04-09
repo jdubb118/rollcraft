@@ -115,35 +115,38 @@ export default function TournamentScreen() {
   }
 
   // Advance bracket after player returns from battle
+  // Use timeout to ensure state from restore has settled
   useEffect(() => {
     if (phase !== 'result') return;
-    const result = loadBattleResult();
-    if (!result) return;
+    const timer = setTimeout(() => {
+      const result = loadBattleResult();
+      if (!result || matches.length === 0) return;
 
-    const playerMatch = matches.find(m =>
-      m.round === currentRound &&
-      (m.fighter1?.name === player!.name || m.fighter2?.name === player!.name) &&
-      !m.winner
-    );
+      const playerMatch = matches.find(m =>
+        m.round === currentRound &&
+        (m.fighter1?.name === player!.name || m.fighter2?.name === player!.name) &&
+        !m.winner
+      );
 
-    if (!playerMatch) return;
+      if (!playerMatch) return;
 
-    if (result.winner === 'player') {
-      playerMatch.winner = player!;
-      setMatches([...matches]);
-      advanceRound();
-    } else {
-      playerMatch.winner = playerMatch.fighter1?.name === player!.name ? playerMatch.fighter2! : playerMatch.fighter1!;
-      setMatches([...matches]);
-      setEliminated(true);
-      // Determine placement
-      const totalRounds = Math.log2(tournament!.bracketSize);
-      if (currentRound === totalRounds - 1) setPlacement('silver');
-      else if (currentRound === totalRounds - 2) setPlacement('bronze');
-      else setPlacement('out');
-      setPhase('podium');
-    }
-  }, [phase]);
+      if (result.winner === 'player') {
+        playerMatch.winner = player!;
+        setMatches([...matches]);
+        advanceRound();
+      } else {
+        playerMatch.winner = playerMatch.fighter1?.name === player!.name ? playerMatch.fighter2! : playerMatch.fighter1!;
+        setMatches([...matches]);
+        setEliminated(true);
+        const totalRounds = Math.log2(tournament!.bracketSize);
+        if (currentRound === totalRounds - 1) setPlacement('silver');
+        else if (currentRound === totalRounds - 2) setPlacement('bronze');
+        else setPlacement('out');
+        setPhase('podium');
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [phase, matches.length]);
 
   function advanceRound() {
     const totalRounds = Math.log2(tournament!.bracketSize);
@@ -355,23 +358,40 @@ export default function TournamentScreen() {
       {phase === 'podium' && (
         <div style={{
           padding: 20, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: 16, flex: 1, justifyContent: 'center',
+          alignItems: 'center', gap: 20, flex: 1, justifyContent: 'center',
         }}>
+          {/* Medal icon */}
+          <div style={{
+            fontSize: 48, lineHeight: 1,
+          }}>
+            {placement === 'gold' ? '🥇' : placement === 'silver' ? '🥈' : placement === 'bronze' ? '🥉' : ''}
+          </div>
+
           <div style={{
             fontSize: 'var(--fs-xxl)',
             color: placement === 'gold' ? '#ffd700' : placement === 'silver' ? '#c0c0c0' : placement === 'bronze' ? '#cd7f32' : '#888',
-          }}>
-            {placement === 'gold' ? 'GOLD!' : placement === 'silver' ? 'SILVER' : placement === 'bronze' ? 'BRONZE' : 'ELIMINATED'}
+            textShadow: placement === 'gold' ? '0 0 20px #ffd70066' : 'none',
+          }} className={placement === 'gold' ? 'blink' : ''}>
+            {placement === 'gold' ? 'CHAMPION!' : placement === 'silver' ? 'SILVER MEDAL' : placement === 'bronze' ? 'BRONZE MEDAL' : 'ELIMINATED'}
           </div>
 
-          <div style={{ fontSize: 'var(--fs-sm)', color: '#aaa', textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: '#aaa', textAlign: 'center' }}>
             {tournament.name}
           </div>
 
+          {placement === 'gold' && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#888', textAlign: 'center', lineHeight: 1.8 }}>
+              You fought through the entire bracket.<br/>
+              The crowd is on their feet.
+            </div>
+          )}
+
           {placement !== 'out' && (
             <div style={{
-              padding: '12px 24px', background: '#111', border: '2px solid #ffd700',
-              fontSize: 'var(--fs-md)', color: '#ffd700',
+              padding: '14px 28px', background: '#111',
+              border: `2px solid ${placement === 'gold' ? '#ffd700' : placement === 'silver' ? '#c0c0c0' : '#cd7f32'}`,
+              fontSize: 'var(--fs-lg)',
+              color: placement === 'gold' ? '#ffd700' : placement === 'silver' ? '#c0c0c0' : '#cd7f32',
             }}>
               +${placement === 'gold' ? tournament.prizePool.gold
                 : placement === 'silver' ? tournament.prizePool.silver
@@ -379,14 +399,21 @@ export default function TournamentScreen() {
             </div>
           )}
 
+          {placement === 'out' && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#666', textAlign: 'center', lineHeight: 1.8 }}>
+              You were eliminated. Train harder.<br/>
+              Come back when you're ready.
+            </div>
+          )}
+
           <button
             onClick={handleFinish}
             style={{
-              padding: '12px 30px', background: '#1a1a2e', color: '#22c55e',
-              fontSize: 'var(--fs-md)', border: '2px solid #22c55e',
+              padding: '14px 36px', background: '#1a2a1a',
+              color: '#22c55e', fontSize: 'var(--fs-md)', border: '2px solid #22c55e',
             }}
           >
-            CONTINUE
+            {placement === 'gold' ? 'CLAIM YOUR PRIZE' : 'BACK TO GYM'}
           </button>
         </div>
       )}
