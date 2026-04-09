@@ -3,6 +3,7 @@ import { TILE_SIZE, TILE_COLORS, Tile } from './tiles';
 import { getGrapplerSprite, getPlayerSprite } from '../render/SpriteData';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import type { Belt } from '../engine/types';
+import { getBeltSpriteDir } from '../render/BeltSprites';
 
 const SPRITE_SCALE = 1; // 1:1 with tile size (12x16 sprite in 16x16 tile)
 
@@ -69,7 +70,7 @@ export function renderOverworld(
   ctx.stroke();
 
   // Collect all sprites to draw sorted by row (depth sorting)
-  const sprites: { x: number; y: number; canvas: HTMLCanvasElement; row: number }[] = [];
+  const sprites: { x: number; y: number; canvas: HTMLCanvasElement | HTMLImageElement; row: number; w?: number; h?: number }[] = [];
 
   // NPCs
   for (const npc of state.npcs) {
@@ -93,17 +94,28 @@ export function renderOverworld(
     ? lerpPos(p.row, p.targetRow, p.moveProgress) * TILE_SIZE
     : p.row * TILE_SIZE;
 
-  const playerSprite = playerGiColor
-    ? getPlayerSprite(playerGiColor, SPRITE_SCALE, playerBelt)
-    : getGrapplerSprite('controller', SPRITE_SCALE, playerBelt);
-  sprites.push({ x: px + 2, y: py - 2, canvas: playerSprite, row: p.row });
+  // Try AI directional sprite first, fall back to programmatic
+  const aiSprite = getBeltSpriteDir(playerBelt, p.dir);
+  if (aiSprite) {
+    // AI sprites are 32x32 — draw at 0.5x to fit 16px tile grid
+    sprites.push({ x: px, y: py - 16, canvas: aiSprite as any, row: p.row, w: 16, h: 16 });
+  } else {
+    const playerSprite = playerGiColor
+      ? getPlayerSprite(playerGiColor, SPRITE_SCALE, playerBelt)
+      : getGrapplerSprite('controller', SPRITE_SCALE, playerBelt);
+    sprites.push({ x: px + 2, y: py - 2, canvas: playerSprite, row: p.row });
+  }
 
   // Sort by row for depth
   sprites.sort((a, b) => a.row - b.row);
 
   // Draw all sprites
   for (const s of sprites) {
-    ctx.drawImage(s.canvas, s.x, s.y);
+    if (s.w && s.h) {
+      ctx.drawImage(s.canvas, s.x, s.y, s.w, s.h);
+    } else {
+      ctx.drawImage(s.canvas, s.x, s.y);
+    }
   }
 
   // NPC labels + interaction prompts

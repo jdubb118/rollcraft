@@ -6,6 +6,8 @@
 
 import type { Belt } from '../engine/types';
 
+type Direction = 'front' | 'back' | 'left' | 'right';
+
 const BELT_SPRITE_URLS: Record<Belt, string> = {
   white: '/sprites/belt-white.png',
   blue: '/sprites/belt-blue.png',
@@ -13,6 +15,11 @@ const BELT_SPRITE_URLS: Record<Belt, string> = {
   brown: '/sprites/belt-brown.png',
   black: '/sprites/belt-black.png',
 };
+
+// Directional sprites for overworld
+function getDirSpriteUrl(belt: Belt, dir: Direction): string {
+  return `/sprites/directions/${belt}-${dir}.png`;
+}
 
 // Cache loaded images
 const spriteCache: Record<string, HTMLImageElement> = {};
@@ -61,10 +68,31 @@ export function getCustomSprite(base64: string): HTMLImageElement | null {
 }
 
 /**
+ * Get a directional belt sprite for the overworld.
+ * dir: 'up' | 'down' | 'left' | 'right' maps to back/front/left/right
+ */
+export function getBeltSpriteDir(belt: Belt, overworldDir: string): HTMLImageElement | null {
+  const dirMap: Record<string, Direction> = { up: 'back', down: 'front', left: 'left', right: 'right' };
+  const dir = dirMap[overworldDir] || 'front';
+  const url = getDirSpriteUrl(belt, dir);
+  if (spriteCache[url]) return spriteCache[url];
+  loadImage(url);
+  return null;
+}
+
+/**
  * Preload all belt sprites so they're ready when needed.
  */
 export function preloadBeltSprites(): void {
   for (const url of Object.values(BELT_SPRITE_URLS)) {
     loadImage(url);
+  }
+  // Also preload directional sprites
+  const belts: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
+  const dirs: Direction[] = ['front', 'back', 'left', 'right'];
+  for (const belt of belts) {
+    for (const dir of dirs) {
+      loadImage(getDirSpriteUrl(belt, dir));
+    }
   }
 }
