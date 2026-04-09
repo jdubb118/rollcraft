@@ -8,6 +8,20 @@ import { getRole, getPositionDisplayName } from '../data/positions';
 import MovePanel from '../components/MovePanel';
 import { loadPlayer, loadOpponent, saveBattleResult, isScouted, markScouted } from '../state/saveLoad';
 import ScoutPanel from '../components/ScoutPanel';
+import { sfxHit, sfxCritical, sfxMiss, sfxSubmissionLock, sfxTap, sfxPointsScored, sfxTimeUp, sfxStunned, sfxEscape, sfxMenuSelect, initAudio } from '../engine/sound';
+
+function playSoundsForLines(lines: string[]) {
+  const text = lines.join('\n');
+  if (text.includes('taps out') || text.includes('SUBMISSION')) sfxTap();
+  else if (text.includes('CRITICAL')) sfxCritical();
+  else if (text.includes('connects')) sfxHit();
+  else if (text.includes('missed') || text.includes('goes nowhere')) sfxMiss();
+  if (text.includes('tightening') || text.includes('VERY TIGHT') || text.includes('LOCKED IN')) sfxSubmissionLock();
+  if (text.includes('⚡') && text.includes('points')) sfxPointsScored();
+  if (text.includes('⏱ TIME')) sfxTimeUp();
+  if (text.includes('STUNNED')) sfxStunned();
+  if (text.includes('Escaped') || text.includes('retained') || text.includes('Scrambled')) sfxEscape();
+}
 
 export default function BattleScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,6 +61,8 @@ export default function BattleScreen() {
   // Handle move selection — with pacing between moves
   const handleMoveSelect = useCallback((moveId: string) => {
     if (!state || state.phase !== 'select-move') return;
+    initAudio();
+    sfxMenuSelect();
 
     // Execute the full turn
     const newState = executeTurn(state, moveId);
@@ -70,12 +86,17 @@ export default function BattleScreen() {
     setAnimFrame(1);
     setTimeout(() => setAnimFrame(0), 250);
 
+    // Play sounds for first actor's lines
+    playSoundsForLines(newLines.slice(0, splitIdx));
+
     // Phase 2: second actor's moves (after delay)
-    const delay = Math.min(1200, 400 + splitIdx * 150); // longer pause for more lines
+    const delay = Math.min(1200, 400 + splitIdx * 150);
     setTimeout(() => {
       setState(newState);
       setAnimFrame(2);
       setTimeout(() => setAnimFrame(0), 250);
+      // Play sounds for second actor's lines
+      playSoundsForLines(newLines.slice(splitIdx));
     }, delay);
 
     if (newState.phase === 'battle-over') {

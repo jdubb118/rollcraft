@@ -238,6 +238,7 @@ export interface PlayerProgression {
   npcDefeated: Record<string, boolean>;
   npcScouted: Record<string, boolean>;
   trainingSessions: number;
+  inventory: Record<string, number>; // itemId → quantity
   totalWins: number;
   totalLosses: number;
 }

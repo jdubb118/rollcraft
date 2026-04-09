@@ -4,6 +4,7 @@ import { loadPlayer, savePlayer } from '../state/saveLoad';
 import type { Belt } from '../engine/types';
 import { BELT_MOVE_SLOTS } from '../engine/types';
 import { COACH_DIALOGUE } from '../data/storyArc';
+import { sfxBeltPromotion } from '../engine/sound';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 const BELT_COLORS: Record<Belt, string> = {
@@ -47,6 +48,7 @@ export default function PromotionScreen() {
     if (phase !== 'narrative') return;
     if (lineIndex >= lines.length) {
       setPhase('reveal');
+      sfxBeltPromotion();
       return;
     }
     const delay = lines[lineIndex].length < 20 ? 1500 : 2200;

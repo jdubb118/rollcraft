@@ -52,6 +52,7 @@ const DEFAULT_PROGRESSION: PlayerProgression = {
   npcDefeated: {},
   npcScouted: {},
   trainingSessions: 0,
+  inventory: {},
   totalWins: 0,
   totalLosses: 0,
 };
@@ -139,6 +140,27 @@ export function addTrainingSession(): void {
   const prog = loadProgression();
   prog.trainingSessions = (prog.trainingSessions ?? 0) + 1;
   saveProgression(prog);
+}
+
+// ── Inventory ──
+export function addItem(itemId: string, qty: number = 1): void {
+  const prog = loadProgression();
+  if (!prog.inventory) prog.inventory = {};
+  prog.inventory[itemId] = (prog.inventory[itemId] || 0) + qty;
+  saveProgression(prog);
+}
+
+export function useItem(itemId: string): boolean {
+  const prog = loadProgression();
+  if (!prog.inventory?.[itemId] || prog.inventory[itemId] <= 0) return false;
+  prog.inventory[itemId]--;
+  if (prog.inventory[itemId] === 0) delete prog.inventory[itemId];
+  saveProgression(prog);
+  return true;
+}
+
+export function getInventory(): Record<string, number> {
+  return loadProgression().inventory || {};
 }
 
 // ── Utilities ──

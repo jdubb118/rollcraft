@@ -5,7 +5,7 @@ import { getRegionMap } from '../overworld/maps/registry';
 import { createOverworldState, updateOverworld, getFacingNPC } from '../overworld/OverworldEngine';
 import { renderOverworld } from '../overworld/OverworldRenderer';
 import type { OverworldState, Direction, MenuOption, NPCState } from '../overworld/overworldTypes';
-import { loadPlayer, savePlayer, saveOpponent, loadProgression, spendMoney, getTrainingSessions, addTrainingSession } from '../state/saveLoad';
+import { loadPlayer, savePlayer, saveOpponent, loadProgression, spendMoney, getTrainingSessions, addTrainingSession} from '../state/saveLoad';
 import type { Grappler, Belt, StatKey } from '../engine/types';
 import { BELT_XP_THRESHOLDS, BELT_MOVE_SLOTS } from '../engine/types';
 import { getMove } from '../data/moves';
@@ -13,6 +13,10 @@ import { rollIVs } from '../engine/random';
 import { getLevel } from '../battle/stats';
 import { getDifficulty } from '../components/ScoutPanel';
 import { RIVAL_ENCOUNTERS, REGION_STORIES } from '../data/storyArc';
+import { generateRandomOpponent, shouldTriggerEncounter } from '../data/randomEncounters';
+import { getShopItems } from '../data/items';
+import { addItem } from '../state/saveLoad';
+import { Tile } from '../overworld/tiles';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 import DPad from '../components/DPad';
@@ -108,9 +112,10 @@ export default function OverworldScreen() {
       if (!state.interactingNPC) {
         updateOverworld(state, tileMap, inputRef.current, dt);
 
-        // Check exit tiles
+        // Check exit tiles + random encounters
         const p = state.player;
         if (!p.isMoving) {
+          // Exit check
           for (const exit of regionRef.current.exits) {
             if (p.col === exit.col && p.row === exit.row) {
               if (exit.targetRegion === '__world_map__') {
@@ -118,6 +123,21 @@ export default function OverworldScreen() {
                 return;
               }
             }
+          }
+
+          // Random mat encounter check (only on mat tiles)
+          const currentTile = tileMap[p.row]?.[p.col];
+          if (currentTile === Tile.MAT && shouldTriggerEncounter() && player) {
+            const { opponent, greeting } = generateRandomOpponent(player.belt, player.xp);
+            saveOpponent(opponent);
+            setArrivalText([
+              `"${greeting}"`,
+              `${opponent.name} (${opponent.belt} belt ${opponent.style.replace('-', ' ')}) wants to roll!`,
+            ]);
+            // When arrival text is dismissed, go to battle
+            localStorage.setItem('rollcraft-random-encounter', 'true');
+            stopped = true;
+            return;
           }
         }
       }
@@ -314,6 +334,25 @@ export default function OverworldScreen() {
       const statLabels: Record<StatKey, string> = { str: 'STR', tec: 'TEC', tgh: 'TGH', flx: 'FLX', spd: 'SPD', end: 'END' };
       showText(`TRAINING COMPLETE!\n\n${statLabels[stat]} +4 (now ${player.evs[stat]}/252)\n\n-$${currentCost}`);
 
+    } else if (action === 'shop') {
+      const prog = loadProgression();
+      const items = getShopItems();
+      const shopOptions: MenuOption[] = items.map(item => ({
+        label: `${item.name} — $${item.cost}`,
+        action: `buy-item:${item.id}`,
+        disabled: prog.money < item.cost,
+      }));
+      showMenu(`GYM SHOP\n\nYou have $${prog.money}`, shopOptions);
+
+    } else if (action.startsWith('buy-item:')) {
+      const itemId = action.replace('buy-item:', '');
+      const item = getShopItems().find(i => i.id === itemId);
+      if (!item) return;
+      const paid = spendMoney(item.cost);
+      if (!paid) { showText("Not enough Mat Bucks."); return; }
+      addItem(itemId);
+      showText(`PURCHASED!\n\n${item.name}\n${item.description}\n\n-$${item.cost}`);
+
     } else if (action === 'exam') {
       showText("You need more mat time before your next belt. Keep training.");
     } else if (action.startsWith('enter-tournament:')) {
@@ -366,6 +405,7 @@ export default function OverworldScreen() {
     if (npc.def.role === 'instructor' && npc.def.teachableMoves) {
       options.push({ label: 'LEARN A MOVE', action: 'learn' });
       options.push({ label: 'TRAIN STATS', action: 'train' });
+      options.push({ label: 'SHOP', action: 'shop' });
     }
     if (npc.def.role === 'tournament-desk' && npc.def.tournamentId) {
       options.push({ label: 'ENTER TOURNAMENT', action: `enter-tournament:${npc.def.tournamentId}` });
@@ -439,6 +479,15 @@ export default function OverworldScreen() {
             MAP
           </button>
           <button
+            onClick={() => navigate('/movedex')}
+            style={{
+              padding: '6px 10px', background: '#1a1a2e', color: '#22c55e',
+              fontSize: 'var(--fs-xs)', border: '1px solid #22c55e',
+            }}
+          >
+            DEX
+          </button>
+          <button
             onClick={() => navigate('/stats')}
             style={{
               padding: '6px 10px', background: '#1a1a2e', color: '#ffd700',
@@ -470,7 +519,15 @@ export default function OverworldScreen() {
       {/* Arrival story overlay */}
       {arrivalText && (
         <div
-          onClick={() => setArrivalText(null)}
+          onClick={() => {
+            const isEncounter = localStorage.getItem('rollcraft-random-encounter');
+            if (isEncounter) {
+              localStorage.removeItem('rollcraft-random-encounter');
+              navigate('/battle');
+            } else {
+              setArrivalText(null);
+            }
+          }}
           style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(0,0,0,0.85)', zIndex: 55,
