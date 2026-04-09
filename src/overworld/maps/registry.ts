@@ -4,6 +4,10 @@ import { SCRAMBLE_VALLEY_MAP, SCRAMBLE_VALLEY_SPAWN, SCRAMBLE_VALLEY_NPCS } from
 import { OLD_TOWN_MAP, OLD_TOWN_SPAWN, OLD_TOWN_NPCS } from './oldTown';
 import { STEEL_MOUNTAIN_MAP, STEEL_MOUNTAIN_SPAWN, STEEL_MOUNTAIN_NPCS } from './steelMountain';
 import { CORAL_BAY_MAP, CORAL_BAY_SPAWN, CORAL_BAY_NPCS } from './coralBay';
+import { SAMBO_DISTRICT_MAP, SAMBO_DISTRICT_SPAWN, SAMBO_DISTRICT_NPCS } from './samboDistrict';
+import { NOVA_CAMP_MAP, NOVA_CAMP_SPAWN, NOVA_CAMP_NPCS } from './novaCamp';
+import { IRON_COAST_MAP, IRON_COAST_SPAWN, IRON_COAST_NPCS } from './ironCoast';
+import { SUMMIT_CITY_MAP, SUMMIT_CITY_SPAWN, SUMMIT_CITY_NPCS } from './summitCity';
 
 export interface RegionMap {
   tileMap: number[][];
@@ -67,6 +71,38 @@ export const REGION_MAPS: Record<string, RegionMap> = {
       { col: 10, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
     ],
     dropInFee: 50,
+  },
+  'sambo-district': {
+    tileMap: SAMBO_DISTRICT_MAP, playerSpawn: SAMBO_DISTRICT_SPAWN, npcs: SAMBO_DISTRICT_NPCS,
+    exits: [
+      { col: 9, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+      { col: 10, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+    ],
+    dropInFee: 60,
+  },
+  'nova-camp': {
+    tileMap: NOVA_CAMP_MAP, playerSpawn: NOVA_CAMP_SPAWN, npcs: NOVA_CAMP_NPCS,
+    exits: [
+      { col: 9, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+      { col: 10, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+    ],
+    dropInFee: 80,
+  },
+  'iron-coast': {
+    tileMap: IRON_COAST_MAP, playerSpawn: IRON_COAST_SPAWN, npcs: IRON_COAST_NPCS,
+    exits: [
+      { col: 9, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+      { col: 10, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+    ],
+    dropInFee: 100,
+  },
+  'summit-city': {
+    tileMap: SUMMIT_CITY_MAP, playerSpawn: SUMMIT_CITY_SPAWN, npcs: SUMMIT_CITY_NPCS,
+    exits: [
+      { col: 9, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+      { col: 10, row: 14, targetRegion: '__world_map__', targetCol: 0, targetRow: 0 },
+    ],
+    dropInFee: 0, // World Championship venue — free entry
   },
 };
 

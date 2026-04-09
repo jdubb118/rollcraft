@@ -25,6 +25,41 @@ export const TOURNAMENTS: Tournament[] = [
     entryFee: 150, prizePool: { gold: 1200, silver: 500, bronze: 250 },
     ruleSet: 'points',
   },
+  {
+    id: 'coral-bay-pro', name: 'Coral Bay Pro',
+    regionId: 'coral-bay', bracketSize: 16,
+    beltMin: 'purple', beltMax: 'black',
+    entryFee: 250, prizePool: { gold: 2500, silver: 1000, bronze: 500 },
+    ruleSet: 'points',
+  },
+  {
+    id: 'sambo-cup', name: 'Sambo District Cup',
+    regionId: 'sambo-district', bracketSize: 16,
+    beltMin: 'brown', beltMax: 'black',
+    entryFee: 250, prizePool: { gold: 3000, silver: 1200, bronze: 600 },
+    ruleSet: 'points',
+  },
+  {
+    id: 'nova-pro', name: 'Nova Pro Championship',
+    regionId: 'nova-camp', bracketSize: 32,
+    beltMin: 'brown', beltMax: 'black',
+    entryFee: 400, prizePool: { gold: 5000, silver: 2000, bronze: 1000 },
+    ruleSet: 'submission-only',
+  },
+  {
+    id: 'iron-grand-prix', name: 'Iron Coast Grand Prix',
+    regionId: 'iron-coast', bracketSize: 32,
+    beltMin: 'black', beltMax: 'black',
+    entryFee: 500, prizePool: { gold: 10000, silver: 4000, bronze: 2000 },
+    ruleSet: 'points',
+  },
+  {
+    id: 'world-championship', name: 'World Championship',
+    regionId: 'summit-city', bracketSize: 32,
+    beltMin: 'black', beltMax: 'black',
+    entryFee: 1000, prizePool: { gold: 25000, silver: 10000, bronze: 5000 },
+    ruleSet: 'points',
+  },
 ];
 
 export function getTournament(id: string): Tournament | undefined {
