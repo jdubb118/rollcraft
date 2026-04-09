@@ -79,7 +79,15 @@ export default function StatsScreen() {
           BACK
         </button>
         <span style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }}>FIGHTER PROFILE</span>
-        <div style={{ fontSize: 'var(--fs-xs)', color: '#22c55e' }}>${prog.money}</div>
+        <button
+          onClick={() => navigate('/sprite-creator')}
+          style={{
+            padding: '4px 8px', background: '#1a1a2e', color: '#e91e63',
+            fontSize: 'var(--fs-xs)', border: '1px solid #e91e63',
+          }}
+        >
+          SPRITE
+        </button>
       </div>
 
       {/* Tabs */}
