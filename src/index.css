@@ -29,6 +29,12 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   background: #0a0a14;
+  /* Force clean GPU layer — prevents subpixel font ghosting on Retina */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: translateZ(0);
+  will-change: contents;
+  contain: paint;
 }
 
 /* On wide screens, add a frame effect */

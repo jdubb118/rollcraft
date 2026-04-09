@@ -44,15 +44,35 @@ export default function BattleScreen() {
     }
   }, [state?.log.length]);
 
-  // Handle move selection
+  // Handle move selection — with pacing between moves
   const handleMoveSelect = useCallback((moveId: string) => {
     if (!state || state.phase !== 'select-move') return;
 
+    // Execute the full turn
+    const newState = executeTurn(state, moveId);
+
+    // Find where the turn divider is in the log to split player vs opponent
+    const oldLogLen = state.log.length;
+    const newLines = newState.log.slice(oldLogLen);
+    const dividerIdx = newLines.findIndex(l => l.includes('has initiative'));
+    const splitPoint = dividerIdx >= 0 ? Math.floor(newLines.length / 2) : Math.floor(newLines.length / 2);
+
+    // Phase 1: show first half of the turn (first actor's move)
+    const phase1State = {
+      ...newState,
+      log: [...state.log, ...newLines.slice(0, Math.max(1, splitPoint))],
+      phase: 'animating' as const,
+    };
+    setState(phase1State);
     setAnimFrame(1);
     setTimeout(() => setAnimFrame(0), 200);
 
-    const newState = executeTurn(state, moveId);
-    setState(newState);
+    // Phase 2: show full result after a pause
+    setTimeout(() => {
+      setState(newState);
+      setAnimFrame(2);
+      setTimeout(() => setAnimFrame(0), 200);
+    }, 800);
 
     if (newState.phase === 'battle-over') {
       const isWin = newState.winner === 'player';
