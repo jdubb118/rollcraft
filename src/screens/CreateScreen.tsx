@@ -71,6 +71,19 @@ export default function CreateScreen() {
     const showAftermath = localStorage.getItem('rollcraft-show-aftermath');
     if (showAftermath) {
       localStorage.removeItem('rollcraft-show-aftermath');
+      // Restore state that was saved before the battle
+      const saved = localStorage.getItem('rollcraft-onboarding-state');
+      if (saved) {
+        try {
+          const s = JSON.parse(saved);
+          setName(s.name || '');
+          setCoachName(s.coachName || '');
+          setGymName(s.gymName || '');
+          setSelectedPath(s.selectedPath ?? null);
+          setGiColor(s.giColor || 'white');
+        } catch {}
+        localStorage.removeItem('rollcraft-onboarding-state');
+      }
       setTextLine(0);
       setPhase('rival-aftermath');
     }
@@ -357,6 +370,11 @@ export default function CreateScreen() {
                 const kenzo = createKenzo(path.style);
                 saveOpponent(kenzo);
                 localStorage.setItem('rollcraft-onboarding-battle', 'true');
+                // Save state so aftermath can restore it
+                localStorage.setItem('rollcraft-onboarding-state', JSON.stringify({
+                  name: name.trim(), coachName: coachName.trim(),
+                  gymName: gymName.trim(), selectedPath, giColor,
+                }));
                 navigate('/battle');
               }
             }}
