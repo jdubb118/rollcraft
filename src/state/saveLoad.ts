@@ -170,8 +170,11 @@ export function hasExistingPlayer(): boolean {
 }
 
 export function clearAll(): void {
-  localStorage.removeItem(PLAYER_KEY);
-  localStorage.removeItem(OPPONENT_KEY);
-  localStorage.removeItem(RESULT_KEY);
-  localStorage.removeItem(PROGRESSION_KEY);
+  // Remove all game keys including dynamic ones
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('rollcraft-')) keysToRemove.push(key);
+  }
+  for (const key of keysToRemove) localStorage.removeItem(key);
 }

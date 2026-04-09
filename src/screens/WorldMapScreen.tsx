@@ -47,24 +47,27 @@ export default function WorldMapScreen() {
 
   const handleRegionClick = (regionId: string) => {
     const unlocked = isRegionUnlocked(regionId, player.belt, progression.stamps, tournamentWins, npcWinCount);
-    // Always select to show info; only travel if unlocked
-    setSelectedRegion(regionId);
+
+    // First tap — select to show info panel
+    if (selectedRegion !== regionId) {
+      setSelectedRegion(regionId);
+      return;
+    }
+
+    // Second tap — travel (if unlocked)
     if (!unlocked) return;
-
-    // Check if region has a map
     const regionMap = getRegionMap(regionId);
-    if (!regionMap) return; // region not built yet
+    if (!regionMap) return;
 
-    // Pay drop-in fee if visiting (not home gym)
+    // Pay drop-in fee
     if (regionMap.dropInFee > 0 && regionId !== progression.currentRegionId) {
       if (progression.money < regionMap.dropInFee) {
-        alert(`Drop-in fee: $${regionMap.dropInFee} Mat Bucks. You have $${progression.money}.`);
-        return;
+        setSelectedRegion(regionId); // keep showing info
+        return; // info panel already shows the cost
       }
       spendMoney(regionMap.dropInFee);
     }
 
-    // Save current region and navigate
     updateProgression({ currentRegionId: regionId });
     navigate('/overworld');
   };
@@ -87,7 +90,7 @@ export default function WorldMapScreen() {
         </button>
         <span style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }}>WORLD MAP</span>
         <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
-          {progression.stamps.length}/7 STAMPS | ${progression.money}
+          {progression.stamps.length}/{REGIONS.filter(r => r.stampId).length} STAMPS | ${progression.money}
         </span>
       </div>
 
@@ -161,7 +164,7 @@ export default function WorldMapScreen() {
               {isCurrent && (
                 <div style={{
                   position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
-                  fontSize: '0.2rem', color: '#ffd700',
+                  fontSize: 'var(--fs-xs)', color: '#ffd700',
                 }} className="blink">
                   ▼ YOU
                 </div>

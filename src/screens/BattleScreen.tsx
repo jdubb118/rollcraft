@@ -6,7 +6,7 @@ import { createBattleState, getPlayerMoves, executeTurn } from '../battle/Battle
 import { renderBattle } from '../render/BattleRenderer';
 import { getRole, getPositionDisplayName } from '../data/positions';
 import MovePanel from '../components/MovePanel';
-import { loadPlayer, loadOpponent, saveBattleResult, isScouted, markScouted } from '../state/saveLoad';
+import { loadPlayer, loadOpponent, saveBattleResult, isScouted, markScouted, getInventory, useItem } from '../state/saveLoad';
 import ScoutPanel from '../components/ScoutPanel';
 import { sfxHit, sfxCritical, sfxMiss, sfxSubmissionLock, sfxTap, sfxPointsScored, sfxTimeUp, sfxStunned, sfxEscape, sfxMenuSelect, initAudio } from '../engine/sound';
 
@@ -39,7 +39,16 @@ export default function BattleScreen() {
       navigate('/create');
       return;
     }
-    setState(createBattleState(player, opponent));
+    const battleState = createBattleState(player, opponent);
+
+    // Apply consumable items from inventory
+    const inv = getInventory();
+    if (inv['athletic-tape']) { useItem('athletic-tape'); battleState.player.currentHp = Math.min(battleState.player.stats.maxHp, battleState.player.currentHp + Math.floor(battleState.player.stats.maxHp * 0.3)); battleState.log.push('Athletic Tape applied — HP +30%'); }
+    if (inv['acai-bowl']) { useItem('acai-bowl'); battleState.player.currentHp = battleState.player.stats.maxHp; battleState.log.push('Acai Bowl — full HP restore!'); }
+    if (inv['electrolytes']) { useItem('electrolytes'); battleState.player.currentStamina = battleState.player.maxStamina; battleState.log.push('Electrolytes — full stamina!'); }
+    if (inv['energy-gel']) { useItem('energy-gel'); battleState.player.currentStamina = Math.min(battleState.player.maxStamina, battleState.player.currentStamina + Math.floor(battleState.player.maxStamina * 0.3)); battleState.log.push('Energy Gel — stamina +30%'); }
+
+    setState(battleState);
   }, [navigate]);
 
   // Render canvas
@@ -102,9 +111,11 @@ export default function BattleScreen() {
     if (newState.phase === 'battle-over') {
       const isWin = newState.winner === 'player';
       const isDraw = newState.winner === null;
-      const xpGained = isWin
-        ? 100 + Math.floor(newState.turn * 2)
-        : isDraw ? 50 : Math.floor(30 + newState.turn);
+      // XP scales by opponent belt level — harder fights reward more
+      const beltMultiplier: Record<string, number> = { white: 1, blue: 1.5, purple: 2, brown: 2.5, black: 3 };
+      const mult = beltMultiplier[newState.opponent.grappler.belt] || 1;
+      const baseXp = isWin ? 100 + Math.floor(newState.turn * 2) : isDraw ? 50 : Math.floor(30 + newState.turn);
+      const xpGained = Math.floor(baseXp * mult);
 
       // Mark opponent as scouted (now you know their tendencies)
       markScouted(newState.opponent.grappler.name);
