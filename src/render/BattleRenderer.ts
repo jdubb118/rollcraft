@@ -1,6 +1,30 @@
 import type { BattleState } from '../engine/types';
 import { getGrapplerSprite, getPlayerSprite, SPRITE_W, SPRITE_H } from './SpriteData';
 import { getBeltSprite, getCustomSprite } from './BeltSprites';
+
+// Battle background images per region
+const BG_URLS: Record<string, string> = {
+  home: '/sprites/backgrounds/bg-home.png',
+  'scramble-valley': '/sprites/backgrounds/bg-scramble.png',
+  'old-town': '/sprites/backgrounds/bg-oldtown.png',
+  'steel-mountain': '/sprites/backgrounds/bg-steel.png',
+  'coral-bay': '/sprites/backgrounds/bg-coral.png',
+  'sambo-district': '/sprites/backgrounds/bg-sambo.png',
+  'nova-camp': '/sprites/backgrounds/bg-nova.png',
+  'iron-coast': '/sprites/backgrounds/bg-iron.png',
+  'summit-city': '/sprites/backgrounds/bg-summit.png',
+};
+
+const bgCache: Record<string, HTMLImageElement> = {};
+function getBattleBg(regionId: string): HTMLImageElement | null {
+  const url = BG_URLS[regionId];
+  if (!url) return null;
+  if (bgCache[url]) return bgCache[url];
+  const img = new Image();
+  img.onload = () => { bgCache[url] = img; };
+  img.src = url;
+  return null;
+}
 import { getRole, getPositionDisplayName } from '../data/positions';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import { getLevel } from '../battle/stats';
@@ -72,9 +96,16 @@ function drawPixelText(ctx: CanvasRenderingContext2D, text: string, x: number, y
   ctx.fillText(text, x, y);
 }
 
-export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, animFrame: number) {
+export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, animFrame: number, regionId?: string) {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  drawMat(ctx);
+
+  // Draw AI background if available, otherwise fallback to drawn mat
+  const bg = regionId ? getBattleBg(regionId) : null;
+  if (bg) {
+    ctx.drawImage(bg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  } else {
+    drawMat(ctx);
+  }
 
   const scale = 4;
 

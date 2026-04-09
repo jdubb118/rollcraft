@@ -57,7 +57,11 @@ export default function BattleScreen() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
-    renderBattle(ctx, state, animFrame);
+    // Get current region for battle background
+    const regionId = localStorage.getItem('rollcraft-progression')
+      ? (JSON.parse(localStorage.getItem('rollcraft-progression') || '{}').currentRegionId || 'home')
+      : 'home';
+    renderBattle(ctx, state, animFrame, regionId);
   }, [state, animFrame]);
 
   // Auto-scroll log
