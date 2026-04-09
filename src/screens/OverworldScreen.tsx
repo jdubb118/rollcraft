@@ -43,7 +43,7 @@ function npcToGrappler(npc: NPCState): Grappler {
     ivs: rollIVs(),
     evs: def.evSpread ?? { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: def.moves,
-    learnedMoves: [...def.moves],
+    learnedMoves: [...def.moves], moveXp: {},
     frame: def.frame ?? 'medium',
   };
 }

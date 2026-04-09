@@ -6,6 +6,7 @@ import { deductStamina, recoverStamina, getFatiguePhase, getFatigueModifiers } f
 import { resolveSubmissionPhase } from './SubmissionMinigame';
 import { createBattleGrappler } from './stats';
 import { randInt } from '../engine/random';
+import { getMoveBonus } from './moveXp';
 
 // Match time limits by belt (in turns — roughly 1 turn = 30 seconds)
 const MATCH_TURNS: Record<Belt, number> = {
@@ -60,6 +61,7 @@ export function createBattleState(playerGrappler: Grappler, opponentGrappler: Gr
     playerAdvantages: 0, opponentAdvantages: 0,
     ruleSet: 'points',
     lastPositionChange: null,
+    moveUsage: {},
   };
   state.firstActor = computeFirstActor(state);
   return state;
@@ -282,10 +284,14 @@ function executeMove(
     return;
   }
 
+  // ── MOVE MASTERY (XP-based bonuses) ──
+  const moveXpAmount = attacker.grappler.moveXp?.[move.id] || 0;
+  const mastery = getMoveBonus(moveXpAmount);
+
   // ── FATIGUE-ADJUSTED STAMINA COST ──
   const fatigue = getFatiguePhase(state.turn, attacker.stats.end);
   const fatigueMods = getFatigueModifiers(fatigue);
-  let cost = move.staminaCost;
+  let cost = Math.max(1, move.staminaCost - mastery.staminaReduction);
   if (isChained(attacker.lastMoveId, move)) cost = Math.max(1, cost - 3);
   cost = Math.ceil(cost * fatigueMods.costMod);
   deductStamina(attacker, cost);
@@ -308,13 +314,17 @@ function executeMove(
   }
 
   // ── ACCURACY CHECK ──
-  let accuracy = move.accuracy;
+  let accuracy = move.accuracy + mastery.accuracyBonus;
   if (isChained(attacker.lastMoveId, move)) accuracy += 10;
   if (attacker.isGassed) accuracy -= 30;
-  // Momentum accuracy bonus
   if (attacker.momentum >= 1) accuracy += attacker.momentum * 5;
-  // Setup accuracy bonus
   if (attacker.setupBonus) accuracy += attacker.setupBonus.accuracyMod;
+
+  // Track move usage for XP (player only)
+  if (attackerIs === 'player' && move.id !== '__stall__' && move.id !== '__spaz__') {
+    if (!state.moveUsage[move.id]) state.moveUsage[move.id] = { uses: 0, hits: 0 };
+    state.moveUsage[move.id].uses++;
+  }
 
   if (Math.random() * 100 > accuracy) {
     state.log.push(`${move.name} missed!`);
@@ -324,6 +334,9 @@ function executeMove(
     if (attacker.momentum > 0) { attacker.momentum = 0; state.log.push(`Momentum reset!`); }
     return;
   }
+
+  // Mark hit for move XP
+  if (attackerIs === 'player' && state.moveUsage[move.id]) state.moveUsage[move.id].hits++;
 
   const oldPosition = state.position;
   const chained = isChained(attacker.lastMoveId, move);

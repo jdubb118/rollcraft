@@ -5,6 +5,7 @@ import { getTournament, generateBracket } from '../data/tournaments';
 import { STYLE_NAMES, STYLE_COLORS } from '../engine/constants';
 import type { Grappler, TournamentResult } from '../engine/types';
 import { getLevel } from '../battle/stats';
+import { RIVAL_ENCOUNTERS, RIVAL_NAME } from '../data/storyArc';
 
 type TourneyPhase = 'registration' | 'bracket' | 'pre-match' | 'fighting' | 'result' | 'podium';
 
@@ -247,8 +248,25 @@ export default function TournamentScreen() {
       </div>
 
       {/* Registration */}
-      {phase === 'registration' && (
+      {phase === 'registration' && (() => {
+        const rivalEvent = RIVAL_ENCOUNTERS.find(e => e.region === tournament.regionId && e.trigger?.includes('tournament'));
+        const storyKey = `rollcraft-rival-tourney-${tournament.id}`;
+        const showRival = rivalEvent && !localStorage.getItem(storyKey);
+        if (showRival) localStorage.setItem(storyKey, 'true');
+        return (
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          {showRival && rivalEvent && (
+            <div style={{ marginBottom: 8, textAlign: 'center' }}>
+              {rivalEvent.dialogueBefore.map((dl, i) => (
+                <div key={i} style={{
+                  fontSize: 'var(--fs-xs)', lineHeight: 1.8,
+                  color: dl.speaker === RIVAL_NAME ? '#ef4444' : '#ccc',
+                }}>
+                  {dl.speaker}: {dl.line}
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ fontSize: 'var(--fs-sm)', color: '#aaa', textAlign: 'center', lineHeight: 2 }}>
             Entry fee: ${tournament.entryFee}<br/>
             Gold: ${tournament.prizePool.gold} | Silver: ${tournament.prizePool.silver} | Bronze: ${tournament.prizePool.bronze}<br/>
@@ -276,7 +294,8 @@ export default function TournamentScreen() {
             BACK
           </button>
         </div>
-      )}
+        );
+      })()}
 
       {/* Bracket view */}
       {(phase === 'bracket' || phase === 'pre-match') && (

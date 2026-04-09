@@ -3,6 +3,7 @@ import { loadBattleResult, loadPlayer, savePlayer, recordWin, recordLoss, addMon
 import { STYLE_NAMES } from '../engine/constants';
 import { BELT_XP_THRESHOLDS } from '../engine/types';
 import type { Belt, StatKey } from '../engine/types';
+import { getMoveXpGain, getMoveBonus, getMasteryLabel } from '../battle/moveXp';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 
@@ -96,6 +97,15 @@ export default function ResultScreen() {
       player.evs[key] = Math.min(EV_CAP, player.evs[key] + (amount || 0));
     }
 
+    // Apply move XP from this battle
+    if (!player.moveXp) player.moveXp = {};
+    if (result.moveUsage) {
+      for (const [moveId, usage] of Object.entries(result.moveUsage)) {
+        const xpGain = usage.hits * getMoveXpGain(true) + (usage.uses - usage.hits) * getMoveXpGain(false);
+        player.moveXp[moveId] = (player.moveXp[moveId] || 0) + xpGain;
+      }
+    }
+
     // Do NOT auto-promote — player must visit coach
     savePlayer(player);
 
@@ -182,6 +192,34 @@ export default function ResultScreen() {
           })}
         </div>
       </div>
+
+      {/* Move mastery gains */}
+      {result.moveUsage && Object.keys(result.moveUsage).length > 0 && (
+        <div style={{
+          padding: '8px 16px', background: '#111', border: '1px solid #222',
+          width: '100%', maxWidth: 280,
+        }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#888', marginBottom: 6, textAlign: 'center' }}>
+            TECHNIQUE GROWTH
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {Object.entries(result.moveUsage).map(([moveId, usage]) => {
+              const xpGain = usage.hits * getMoveXpGain(true) + (usage.uses - usage.hits) * getMoveXpGain(false);
+              const totalXp = (player.moveXp?.[moveId] || 0);
+              const bonus = getMoveBonus(totalXp);
+              return (
+                <div key={moveId} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  fontSize: 'var(--fs-xs)',
+                }}>
+                  <span style={{ color: '#ccc' }}>{moveId.replace(/-/g, ' ')}</span>
+                  <span style={{ color: '#22c55e' }}>+{xpGain}xp ({getMasteryLabel(bonus.level)})</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Promotion hint */}
       {promotionReady && (

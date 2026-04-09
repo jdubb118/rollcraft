@@ -18,6 +18,7 @@ export function loadPlayer(): Grappler | null {
   // Backward compat
   if (!player.learnedMoves) player.learnedMoves = [...player.moves];
   if (!player.frame) player.frame = 'medium';
+  if (!player.moveXp) player.moveXp = {};
   return player;
 }
 

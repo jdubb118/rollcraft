@@ -79,7 +79,7 @@ export function generateRandomOpponent(playerBelt: Belt, _playerXp?: number): {
       ivs: rollIVs(),
       evs,
       moves: arch.startingMoves.slice(0, moveCount),
-      learnedMoves: [...arch.startingMoves],
+      learnedMoves: [...arch.startingMoves], moveXp: {},
       frame: STYLE_FRAME[arch.style],
     },
     greeting,

@@ -34,7 +34,7 @@ function createPlayerGrappler(path: StarterPath, name: string, giColor: string, 
     id: makeId(), name, style: path.style, belt: 'white', xp: 0,
     baseStats: path.baseStats, ivs: rollIVs(),
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
-    moves: path.moves, learnedMoves: [...path.moves],
+    moves: path.moves, learnedMoves: [...path.moves], moveXp: {},
     frame: STYLE_FRAME[path.style], giColor, gymName, coachName,
   };
 }
@@ -48,7 +48,7 @@ function createKenzo(playerStyle: Style): Grappler {
     ivs: { str: 5, tec: 5, tgh: 5, flx: 5, spd: 5, end: 5 }, // weaker IVs — player should win
     evs: { str: 0, tec: 0, tgh: 0, flx: 0, spd: 0, end: 0 },
     moves: arch.startingMoves.slice(0, 3), // fewer moves
-    learnedMoves: [...arch.startingMoves.slice(0, 3)],
+    learnedMoves: [...arch.startingMoves.slice(0, 3)], moveXp: {},
     frame: STYLE_FRAME[kenzoStyle],
   };
 }

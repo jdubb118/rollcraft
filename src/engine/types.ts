@@ -96,6 +96,7 @@ export interface Grappler {
   evs: EVs;
   moves: string[];         // equipped move IDs (limited by belt slots)
   learnedMoves: string[];  // all moves ever learned (full pool)
+  moveXp: Record<string, number>; // move ID → XP earned from using it
   frame: Frame;
   giColor?: string;
   gymName?: string;
@@ -163,6 +164,7 @@ export interface BattleState {
   ruleSet: RuleSet;
   // Position hold tracking (need 3s / ~1 turn to score)
   lastPositionChange: { position: Position; who: 'player' | 'opponent'; turn: number } | null;
+  moveUsage: Record<string, { uses: number; hits: number }>; // track move usage for XP
 }
 
 // ── Archetype (starter template) ──
@@ -188,6 +190,7 @@ export interface BattleResult {
   playerPoints?: number;
   opponentPoints?: number;
   tournamentId?: string;
+  moveUsage?: Record<string, { uses: number; hits: number }>;
 }
 
 // ── World / Region system ──

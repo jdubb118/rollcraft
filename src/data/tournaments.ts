@@ -144,7 +144,7 @@ export function generateBracket(tournament: Tournament, playerName: string): Gra
       ivs: rollIVs(),
       evs,
       moves: arch.startingMoves.slice(0, 4 + beltIdx),
-      learnedMoves: [...arch.startingMoves],
+      learnedMoves: [...arch.startingMoves], moveXp: {},
       frame: STYLE_FRAME[arch.style],
     });
   }

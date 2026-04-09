@@ -135,6 +135,7 @@ export default function BattleScreen() {
         playerPoints: newState.playerPoints,
         opponentPoints: newState.opponentPoints,
         tournamentId: activeTourneyId || undefined,
+        moveUsage: newState.moveUsage,
       });
     }
   }, [state, navigate]);

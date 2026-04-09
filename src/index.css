@@ -134,6 +134,11 @@ canvas {
 
 .blink { animation: blink 1s step-end infinite; }
 .fade-in { animation: fadeIn 0.3s ease; }
+
+/* Screen transition — all game-shell screens fade in */
+.game-shell {
+  animation: fadeIn 0.25s ease;
+}
 .shake { animation: shake 0.2s ease; }
 
 .safe-bottom {

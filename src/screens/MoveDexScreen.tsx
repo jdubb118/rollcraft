@@ -3,6 +3,7 @@ import { loadPlayer } from '../state/saveLoad';
 import { MOVES } from '../data/moves';
 import { STYLE_COLORS, STYLE_NAMES } from '../engine/constants';
 import type { MoveCategory } from '../engine/types';
+import { getMoveBonus, getMasteryLabel } from '../battle/moveXp';
 
 const CATEGORY_ORDER: MoveCategory[] = ['takedown', 'sweep', 'pass', 'submission', 'escape', 'transition', 'setup'];
 const CATEGORY_ICONS: Record<string, string> = {
@@ -95,12 +96,22 @@ export default function MoveDexScreen() {
                           </span>
                         )}
                       </div>
-                      {equipped && (
-                        <span style={{ fontSize: 7, color: '#22c55e' }}>EQUIPPED</span>
-                      )}
-                      {known && !equipped && (
-                        <span style={{ fontSize: 7, color: '#555' }}>LEARNED</span>
-                      )}
+                      {known && (() => {
+                        const xp = player.moveXp?.[move.id] || 0;
+                        const bonus = getMoveBonus(xp);
+                        return (
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 7, color: equipped ? '#22c55e' : '#555' }}>
+                              {equipped ? 'EQUIPPED' : 'LEARNED'}
+                            </div>
+                            {xp > 0 && (
+                              <div style={{ fontSize: 6, color: '#f59e0b' }}>
+                                {getMasteryLabel(bonus.level)} (Lv{bonus.level})
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
