@@ -13,7 +13,8 @@ export function savePlayer(grappler: Grappler): void {
 export function loadPlayer(): Grappler | null {
   const data = localStorage.getItem(PLAYER_KEY);
   if (!data) return null;
-  const player = JSON.parse(data) as Grappler;
+  let player: Grappler;
+  try { player = JSON.parse(data) as Grappler; } catch { return null; }
   // Backward compat
   if (!player.learnedMoves) player.learnedMoves = [...player.moves];
   if (!player.frame) player.frame = 'medium';
@@ -64,7 +65,7 @@ export function saveProgression(progression: PlayerProgression): void {
 export function loadProgression(): PlayerProgression {
   const data = localStorage.getItem(PROGRESSION_KEY);
   if (!data) return { ...DEFAULT_PROGRESSION };
-  return { ...DEFAULT_PROGRESSION, ...JSON.parse(data) };
+  try { return { ...DEFAULT_PROGRESSION, ...JSON.parse(data) }; } catch { return { ...DEFAULT_PROGRESSION }; }
 }
 
 export function updateProgression(updates: Partial<PlayerProgression>): PlayerProgression {

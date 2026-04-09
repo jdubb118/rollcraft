@@ -23,7 +23,7 @@ export function getLevel(grappler: Grappler): number {
 }
 
 function calcStat(base: number, iv: number, ev: number, level: number): number {
-  return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + 5);
+  return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + 8);
 }
 
 function calcHp(base: number, iv: number, ev: number, level: number): number {

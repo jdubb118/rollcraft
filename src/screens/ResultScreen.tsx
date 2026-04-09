@@ -84,7 +84,7 @@ export default function ResultScreen() {
   const nextBeltXp = nextBelt ? BELT_XP_THRESHOLDS[nextBelt] : Infinity;
   const promotionReady = newXp >= nextBeltXp && nextBelt;
 
-  const moneyEarned = isWin ? 25 + Math.floor(result.turns * 2) : isDraw ? 15 : 10;
+  const moneyEarned = isWin ? 35 + Math.floor(result.turns * 2) : isDraw ? 20 : 10;
 
   const handleContinue = () => {
     // Apply XP

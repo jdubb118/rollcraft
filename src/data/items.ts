@@ -49,25 +49,25 @@ export const ITEMS: Item[] = [
   {
     id: 'protein-powder', name: 'Protein Powder',
     description: 'Build strength. +8 STR training points.',
-    cost: 80, category: 'training',
+    cost: 50, category: 'training',
     effect: { type: 'boost-ev', stat: 'str', amount: 8 },
   },
   {
     id: 'yoga-pass', name: 'Yoga Studio Pass',
     description: 'Improve flexibility. +8 FLX training points.',
-    cost: 80, category: 'training',
+    cost: 50, category: 'training',
     effect: { type: 'boost-ev', stat: 'flx', amount: 8 },
   },
   {
     id: 'sprint-intervals', name: 'Sprint Interval Program',
     description: 'Get faster. +8 SPD training points.',
-    cost: 80, category: 'training',
+    cost: 50, category: 'training',
     effect: { type: 'boost-ev', stat: 'spd', amount: 8 },
   },
   {
     id: 'cardio-program', name: 'Cardio Program',
     description: 'Build endurance. +8 END training points.',
-    cost: 80, category: 'training',
+    cost: 50, category: 'training',
     effect: { type: 'boost-ev', stat: 'end', amount: 8 },
   },
 ];

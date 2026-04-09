@@ -9,7 +9,7 @@ import { randInt } from '../engine/random';
 
 // Match time limits by belt (in turns — roughly 1 turn = 30 seconds)
 const MATCH_TURNS: Record<Belt, number> = {
-  white: 10, blue: 12, purple: 14, brown: 16, black: 20,
+  white: 12, blue: 14, purple: 16, brown: 18, black: 22,
 };
 
 // IBJJF point values
@@ -174,6 +174,7 @@ function executeMove(
   defender: BattleGrappler,
   move: Move,
   attackerIs: 'player' | 'opponent',
+  _depth: number = 0,
 ): void {
   const attackerName = attacker.grappler.name;
   const defenderName = defender.grappler.name;
@@ -261,10 +262,8 @@ function executeMove(
   if (!posMatch) {
     // Position changed — try to auto-pick a legal move instead of just stalling
     const legalMoves = getLegalMoves(state, attackerIs).filter(m => m.id !== '__stall__');
-    if (legalMoves.length > 0) {
-      // Pick the best available move (highest power escape/transition)
+    if (legalMoves.length > 0 && _depth < 2) {
       const best = legalMoves.sort((a, b) => {
-        // Prioritize escapes when on bottom
         if (attackerRole === 'bottom') {
           if (a.category === 'escape' && b.category !== 'escape') return -1;
           if (b.category === 'escape' && a.category !== 'escape') return 1;
@@ -272,8 +271,7 @@ function executeMove(
         return b.power - a.power;
       })[0];
       state.log.push(`${attackerName}'s ${move.name} is no longer valid — adapts with ${best.name}!`);
-      // Recursively execute the adapted move
-      executeMove(state, attacker, defender, best, attackerIs);
+      executeMove(state, attacker, defender, best, attackerIs, _depth + 1);
       return;
     }
     // No legal moves — stall

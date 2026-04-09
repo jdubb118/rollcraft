@@ -59,6 +59,7 @@ export default function OverworldScreen() {
   const [menuIndex, setMenuIndex] = useState(0);
   const [, setCurrentRegionId] = useState('home');
   const regionRef = useRef(getRegionMap('home')!);
+  const wasMovingRef = useRef(false);
   const [arrivalText, setArrivalText] = useState<string[] | null>(null);
   const navigate = useNavigate();
 
@@ -125,9 +126,11 @@ export default function OverworldScreen() {
             }
           }
 
-          // Random mat encounter check (only on mat tiles)
+          // Random mat encounter check (only when player just STOPPED moving on a mat tile)
           const currentTile = tileMap[p.row]?.[p.col];
-          if (currentTile === Tile.MAT && shouldTriggerEncounter() && player) {
+          const justStopped = wasMovingRef.current && !p.isMoving;
+          wasMovingRef.current = p.isMoving;
+          if (justStopped && currentTile === Tile.MAT && shouldTriggerEncounter() && player) {
             const { opponent, greeting } = generateRandomOpponent(player.belt, player.xp);
             saveOpponent(opponent);
             setArrivalText([

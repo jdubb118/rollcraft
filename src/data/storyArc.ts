@@ -16,6 +16,11 @@ export const RIVAL_STYLE_MAP: Record<string, Style> = {
   'wrestler': 'leg-locker',
   'guard-player': 'wrestler',
   'leg-locker': 'pressure-passer',
+  'judoka': 'guard-player',
+  'pressure-passer': 'berimbolo',
+  'berimbolo': 'wrestler',
+  'sub-hunter': 'controller',
+  'controller': 'sub-hunter',
 };
 
 export const RIVAL_NAME = 'Kenzo';

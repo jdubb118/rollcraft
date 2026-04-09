@@ -90,5 +90,5 @@ export function generateRandomOpponent(playerBelt: Belt, _playerXp?: number): {
  * Should a random encounter trigger? ~15% chance per step on mat tiles.
  */
 export function shouldTriggerEncounter(): boolean {
-  return Math.random() < 0.15;
+  return Math.random() < 0.08;
 }

@@ -9,6 +9,7 @@ import PromotionScreen from './screens/PromotionScreen'
 import WorldMapScreen from './screens/WorldMapScreen'
 import TournamentScreen from './screens/TournamentScreen'
 import MoveDexScreen from './screens/MoveDexScreen'
+import { Navigate } from 'react-router-dom'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/world" element={<WorldMapScreen />} />
       <Route path="/tournament" element={<TournamentScreen />} />
       <Route path="/movedex" element={<MoveDexScreen />} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
 }

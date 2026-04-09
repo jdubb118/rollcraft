@@ -84,7 +84,7 @@ export default function StatsScreen() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #222' }}>
-        {(['stats', 'moves'] as const).map(t => (
+        {(['stats', 'moves', 'items'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             flex: 1, padding: '8px', background: tab === t ? '#1a1a2e' : '#0a0a14',
             color: tab === t ? '#ffd700' : '#555', fontSize: 'var(--fs-sm)',
