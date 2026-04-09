@@ -99,7 +99,7 @@ export default function ResultScreen() {
     // Do NOT auto-promote — player must visit coach
     savePlayer(player);
 
-    if (isWin) recordWin();
+    if (isWin) recordWin(result.opponentName);
     else if (!isDraw) recordLoss();
     addMoney(moneyEarned);
 
