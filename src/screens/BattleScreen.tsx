@@ -186,7 +186,7 @@ export default function BattleScreen() {
   const initiativeColor = state.firstActor === 'opponent' ? '#ef4444' : '#22c55e';
 
   return (
-    <div className="game-shell">
+    <div className="game-shell" style={{ overflow: isOver ? 'auto' : 'hidden' }}>
       {/* Scoreboard */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -334,7 +334,7 @@ export default function BattleScreen() {
         )}
 
         {isOver && (
-          <div style={{ textAlign: 'center', padding: 16 }}>
+          <div style={{ textAlign: 'center', padding: '8px 16px', paddingBottom: 24 }}>
             <div style={{
               fontSize: 'var(--fs-xxl)',
               color: state.winner === 'player' ? '#22c55e' : state.winner === null ? '#888' : '#ef4444',

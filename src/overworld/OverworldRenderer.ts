@@ -97,8 +97,9 @@ export function renderOverworld(
   // Try AI directional sprite first, fall back to programmatic
   const aiSprite = getBeltSpriteDir(playerBelt, p.dir);
   if (aiSprite) {
-    // AI sprites are 32x32 — draw at 0.5x to fit 16px tile grid
-    sprites.push({ x: px, y: py - 16, canvas: aiSprite as any, row: p.row, w: 16, h: 16 });
+    // AI sprites are 32x32 — draw at ~20px wide so character is visible but not huge
+    const aiW = 20, aiH = 20;
+    sprites.push({ x: px - 2, y: py - 6, canvas: aiSprite as any, row: p.row, w: aiW, h: aiH });
   } else {
     const playerSprite = playerGiColor
       ? getPlayerSprite(playerGiColor, SPRITE_SCALE, playerBelt)

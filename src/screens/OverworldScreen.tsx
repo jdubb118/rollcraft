@@ -462,21 +462,23 @@ export default function OverworldScreen() {
     <div className="game-shell">
       {/* Header bar */}
       <div style={{
-        padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
+        padding: '6px 10px', display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', background: '#0d0d1a', borderBottom: '1px solid #222',
       }}>
-        <span style={{ fontSize: 'var(--fs-sm)', color: '#ffd700' }}>
-          {player.name.toUpperCase()}
-        </span>
-        <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
-          Lv{getLevel(player)} | {player.xp} XP
-        </span>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#ffd700' }}>
+            {player.name.toUpperCase()}
+          </div>
+          <div style={{ fontSize: 7, color: '#666' }}>
+            Lv{getLevel(player)} | {player.xp}xp
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
           <button
             onClick={() => navigate('/world')}
             style={{
-              padding: '6px 10px', background: '#1a1a2e', color: '#3498db',
-              fontSize: 'var(--fs-xs)', border: '1px solid #3498db',
+              padding: '4px 8px', background: '#1a1a2e', color: '#3498db',
+              fontSize: 7, border: '1px solid #3498db',
             }}
           >
             MAP
@@ -484,8 +486,8 @@ export default function OverworldScreen() {
           <button
             onClick={() => navigate('/movedex')}
             style={{
-              padding: '6px 10px', background: '#1a1a2e', color: '#22c55e',
-              fontSize: 'var(--fs-xs)', border: '1px solid #22c55e',
+              padding: '4px 8px', background: '#1a1a2e', color: '#22c55e',
+              fontSize: 7, border: '1px solid #22c55e',
             }}
           >
             DEX
@@ -493,8 +495,8 @@ export default function OverworldScreen() {
           <button
             onClick={() => navigate('/stats')}
             style={{
-              padding: '6px 10px', background: '#1a1a2e', color: '#ffd700',
-              fontSize: 'var(--fs-xs)', border: '1px solid #ffd700',
+              padding: '4px 8px', background: '#1a1a2e', color: '#ffd700',
+              fontSize: 7, border: '1px solid #ffd700',
             }}
           >
             MENU
