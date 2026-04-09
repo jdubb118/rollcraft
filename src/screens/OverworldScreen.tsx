@@ -518,7 +518,7 @@ export default function OverworldScreen() {
           position: 'absolute', bottom: 8, left: 0, right: 0,
           textAlign: 'center', fontSize: 'var(--fs-xs)', color: '#444',
         }}>
-          WALK TO AN NPC AND PRESS A / SPACE TO INTERACT
+          WALK TO AN NPC TO INTERACT • WALK TO THE DOOR TO LEAVE
         </div>
       )}
     </div>

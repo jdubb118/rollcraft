@@ -4,6 +4,7 @@ import { isRegionUnlocked } from '../data/world';
 import { loadPlayer, loadProgression, updateProgression, spendMoney } from '../state/saveLoad';
 import { STYLE_NAMES } from '../engine/constants';
 import { getRegionMap } from '../overworld/maps/registry';
+import { useState } from 'react';
 
 // Region positions on the visual map (percentage-based)
 const REGION_POSITIONS: Record<string, { x: number; y: number }> = {
@@ -35,6 +36,7 @@ export default function WorldMapScreen() {
   const navigate = useNavigate();
   const player = loadPlayer();
   const progression = loadProgression();
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
   if (!player) { navigate('/'); return null; }
 
@@ -45,6 +47,8 @@ export default function WorldMapScreen() {
 
   const handleRegionClick = (regionId: string) => {
     const unlocked = isRegionUnlocked(regionId, player.belt, progression.stamps, tournamentWins, npcWinCount);
+    // Always select to show info; only travel if unlocked
+    setSelectedRegion(regionId);
     if (!unlocked) return;
 
     // Check if region has a map
@@ -126,7 +130,6 @@ export default function WorldMapScreen() {
             <button
               key={region.id}
               onClick={() => handleRegionClick(region.id)}
-              disabled={!unlocked}
               style={{
                 position: 'absolute',
                 left: `${pos.x}%`, top: `${pos.y}%`,
@@ -180,12 +183,39 @@ export default function WorldMapScreen() {
         })}
       </div>
 
-      {/* Bottom info */}
+      {/* Bottom info panel */}
       <div style={{
-        padding: '8px 12px', background: '#0d0d1a', borderTop: '1px solid #222',
-        fontSize: '0.3rem', color: '#666', textAlign: 'center',
+        padding: '10px 14px', background: '#0d0d1a', borderTop: '1px solid #222',
+        fontSize: 'var(--fs-xs)', minHeight: 60,
       }}>
-        TAP A REGION TO TRAVEL
+        {!selectedRegion && (
+          <div style={{ color: '#555', textAlign: 'center' }}>TAP A REGION FOR DETAILS</div>
+        )}
+        {selectedRegion && (() => {
+          const r = REGIONS.find(rr => rr.id === selectedRegion);
+          if (!r) return null;
+          const unlocked = isRegionUnlocked(r.id, player.belt, progression.stamps, tournamentWins, npcWinCount);
+          const hasMap = !!getRegionMap(r.id);
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ color: r.color, fontSize: 'var(--fs-sm)' }}>{r.name.toUpperCase()}</div>
+              <div style={{ color: '#888', lineHeight: 1.6 }}>{r.description}</div>
+              {!unlocked && r.unlockRequirements.length > 0 && (
+                <div style={{ color: '#ef4444', marginTop: 4 }}>
+                  LOCKED — {r.unlockRequirements.map(req => req.label).join(' + ')}
+                </div>
+              )}
+              {unlocked && !hasMap && (
+                <div style={{ color: '#888', marginTop: 4 }}>COMING SOON</div>
+              )}
+              {unlocked && hasMap && (
+                <div style={{ color: '#22c55e', marginTop: 4 }}>
+                  TAP AGAIN TO TRAVEL{getRegionMap(r.id)!.dropInFee > 0 ? ` ($${getRegionMap(r.id)!.dropInFee} drop-in)` : ''}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
