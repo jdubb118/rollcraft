@@ -271,7 +271,6 @@ export default function CreateScreen() {
               </div>
             );
           })}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">TAP TO SKIP</div>
         </div>
       )}
 
@@ -308,7 +307,6 @@ export default function CreateScreen() {
               {line}
             </div>
           ))}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">TAP TO SKIP</div>
         </div>
       )}
 
