@@ -195,18 +195,47 @@ export default function BattleScreen() {
         {/* Battle log */}
         <div style={{ position: 'relative' }}>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               const text = state.log.join('\n');
-              navigator.clipboard.writeText(text).then(() => {
-                const btn = document.getElementById('copy-log-btn');
-                if (btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '📋', 1000); }
-              });
+              const btn = e.currentTarget;
+              try {
+                // Try clipboard API first
+                navigator.clipboard.writeText(text).then(() => {
+                  btn.textContent = '✓ copied';
+                  setTimeout(() => { btn.textContent = '📋'; }, 1500);
+                }).catch(() => {
+                  // Fallback: textarea select+copy
+                  const ta = document.createElement('textarea');
+                  ta.value = text;
+                  ta.style.position = 'fixed';
+                  ta.style.opacity = '0';
+                  document.body.appendChild(ta);
+                  ta.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(ta);
+                  btn.textContent = '✓ copied';
+                  setTimeout(() => { btn.textContent = '📋'; }, 1500);
+                });
+              } catch {
+                // Final fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                btn.textContent = '✓ copied';
+                setTimeout(() => { btn.textContent = '📋'; }, 1500);
+              }
             }}
-            id="copy-log-btn"
             style={{
-              position: 'absolute', top: 4, right: 8, zIndex: 5,
-              background: 'none', border: 'none', color: '#444',
-              fontSize: 12, cursor: 'pointer', padding: 2,
+              position: 'absolute', top: 2, right: 6, zIndex: 10,
+              background: '#1a1a2e', border: '1px solid #333', color: '#888',
+              fontSize: 'var(--fs-xs)', cursor: 'pointer', padding: '2px 6px',
+              borderRadius: 3,
             }}
           >📋</button>
         <div
