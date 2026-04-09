@@ -364,6 +364,6 @@ export const POST_CREDITS = [
   { speaker: 'Player', line: "Everyone's nervous the first day." },
   // Player repeats Prof. Helio's exact words. Full circle.
   { speaker: '', line: "The cycle continues." },
-  { speaker: '', line: "ROLLCRAFT" },
+  { speaker: '', line: "GRAPPLE QUEST" },
   { speaker: '', line: "Thank you for playing." },
 ];

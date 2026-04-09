@@ -15,10 +15,10 @@ export default function TitleScreen() {
           fontSize: 32, color: '#ffd700', textShadow: '3px 3px 0 #8b6914',
           letterSpacing: 4, marginBottom: 8,
         }}>
-          ROLLCRAFT
+          GRAPPLE QUEST
         </h1>
         <p style={{ fontSize: 'var(--fs-md)', color: '#888', letterSpacing: 2 }}>
-          BJJ BATTLE SYSTEM
+          THE BJJ JOURNEY
         </p>
       </div>
 

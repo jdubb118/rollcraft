@@ -262,7 +262,7 @@ export default function CreateScreen() {
             return (
               <div key={i} style={{
                 fontSize: 'var(--fs-sm)',
-                color: isCoach ? '#ffd700' : i === textLine - 1 ? '#e0e0e0' : '#999',
+                color: isCoach ? '#ffd700' : i === textLine - 1 ? '#e0e0e0' : '#bbb',
                 textAlign: 'center', lineHeight: 1.8,
               }} className="fade-in">
                 {line}

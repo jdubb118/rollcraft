@@ -492,7 +492,9 @@ function resolveByPoints(state: BattleState): void {
 // ── Main turn execution ──
 export function executeTurn(state: BattleState, playerMoveId: string): BattleState {
   const s = { ...state, log: [...state.log] };
-  const playerMove = playerMoveId === '__stall__' ? STALL_MOVE : getMove(playerMoveId);
+  const playerMove = playerMoveId === '__stall__' ? STALL_MOVE
+    : playerMoveId === '__spaz__' ? SPAZ_MOVE
+    : getMove(playerMoveId);
   if (!playerMove) return s;
 
   // Fatigue phase announcement (on phase change)
