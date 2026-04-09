@@ -63,8 +63,8 @@ export default function CreateScreen() {
   const [textLine, setTextLine] = useState(0);
   const navigate = useNavigate();
 
-  const coach = coachName.trim() || 'Prof. Helio';
-  const gym = gymName.trim() || 'the academy';
+  const coach = coachName.trim() || 'Coach';
+  const gym = gymName.trim() || 'the gym';
 
   // Check if returning from onboarding battle
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function CreateScreen() {
     "The mats are warm. Music is playing.",
     "Class is already underway.",
     "",
-    "The head coach walks over.",
+    `${coach} walks over.`,
     `"Hey — first day? Welcome."`,
     `"Don't overthink it. Don't get frustrated."`,
     `"Make yourself at home."`,
@@ -216,20 +216,23 @@ export default function CreateScreen() {
         <>
           <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700', textAlign: 'center' }}>YOUR HOME GYM</div>
           <input type="text" value={gymName} onChange={e => setGymName(e.target.value)}
-            placeholder="GYM NAME (optional)" maxLength={20} autoFocus
+            placeholder="GYM NAME" maxLength={20} autoFocus
             style={{ width: '100%', maxWidth: 280, padding: '10px 16px', background: '#111',
               border: '2px solid #333', color: '#fff', fontFamily: "'Press Start 2P', monospace",
               fontSize: 'var(--fs-sm)', textAlign: 'center' }} />
           <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700', textAlign: 'center', marginTop: 8 }}>YOUR COACH</div>
           <input type="text" value={coachName} onChange={e => setCoachName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && setPhase('gi')}
-            placeholder="COACH NAME (optional)" maxLength={16}
+            onKeyDown={e => e.key === 'Enter' && gymName.trim() && coachName.trim() && setPhase('gi')}
+            placeholder="COACH NAME" maxLength={16}
             style={{ width: '100%', maxWidth: 280, padding: '10px 16px', background: '#111',
               border: '2px solid #333', color: '#fff', fontFamily: "'Press Start 2P', monospace",
               fontSize: 'var(--fs-sm)', textAlign: 'center' }} />
-          <button onClick={() => setPhase('gi')}
-            style={{ marginTop: 8, padding: '12px 40px', background: '#ffd700',
-              color: '#000', fontSize: 'var(--fs-md)', minWidth: 200 }}>
+          <button onClick={() => gymName.trim() && coachName.trim() && setPhase('gi')}
+            disabled={!gymName.trim() || !coachName.trim()}
+            style={{ marginTop: 8, padding: '12px 40px',
+              background: gymName.trim() && coachName.trim() ? '#ffd700' : '#333',
+              color: gymName.trim() && coachName.trim() ? '#000' : '#666',
+              fontSize: 'var(--fs-md)', minWidth: 200 }}>
             CONTINUE
           </button>
         </>
