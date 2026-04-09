@@ -913,7 +913,7 @@ export const MOVES: Move[] = [
     chainPotential: [], description: 'Lock up the cradle. Extreme pressure.',
   },
   {
-    id: 'clock-choke', name: 'Clock Choke', category: 'submission', style: 'judoka',
+    id: 'clock-choke-turtle', name: 'Clock Choke', category: 'submission', style: 'judoka',
     posReq: [top('turtle')], resultPosition: null, resultRole: null,
     power: 50, accuracy: 65, staminaCost: 16, statAttack: 'tec', statDefense: 'tgh',
     chainPotential: [], description: 'Walk around to tighten the collar choke.',
@@ -921,7 +921,7 @@ export const MOVES: Move[] = [
 
   // ── KOB Top (more options) ──
   {
-    id: 'kob-armbar', name: 'Spinning Armbar from KOB', category: 'submission', style: 'sub-hunter',
+    id: 'kob-spinning-armbar', name: 'Spinning Armbar from KOB', category: 'submission', style: 'sub-hunter',
     posReq: [top('knee-on-belly')], resultPosition: null, resultRole: null,
     power: 55, accuracy: 62, staminaCost: 18, statAttack: 'tec', statDefense: 'flx',
     chainPotential: [], description: 'Spin to armbar from knee on belly.',
@@ -941,7 +941,7 @@ export const MOVES: Move[] = [
     chainPotential: [], description: 'Isolate the arm from north-south for a tight kimura.',
   },
   {
-    id: 'ns-to-mount', name: 'Transition to Mount', category: 'transition', style: 'pressure-passer',
+    id: 'ns-slide-to-mount', name: 'Transition to Mount', category: 'transition', style: 'pressure-passer',
     posReq: [top('north-south')], resultPosition: 'mount', resultRole: 'top',
     power: 10, accuracy: 85, staminaCost: 8, statAttack: 'str', statDefense: 'spd',
     chainPotential: ['cross-collar-mount', 'armbar-mount'], description: 'Slide to mount from north-south.',

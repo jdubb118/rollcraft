@@ -6,7 +6,9 @@ import { STYLE_NAMES, STYLE_COLORS } from '../engine/constants';
 import { BELT_XP_THRESHOLDS, BELT_MOVE_SLOTS } from '../engine/types';
 import type { Belt } from '../engine/types';
 import { getMove } from '../data/moves';
-import { loadProgression } from '../state/saveLoad';
+import { loadProgression, useItem, savePlayer as saveP } from '../state/saveLoad';
+import { getItem } from '../data/items';
+import type { StatKey } from '../engine/types';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 const BELT_COLORS: Record<Belt, string> = {
@@ -21,7 +23,7 @@ function getNextBelt(belt: Belt): Belt | null {
 export default function StatsScreen() {
   const navigate = useNavigate();
   const [player, setPlayer] = useState(() => loadPlayer());
-  const [tab, setTab] = useState<'stats' | 'moves'>('stats');
+  const [tab, setTab] = useState<'stats' | 'moves' | 'items'>('stats');
 
   if (!player) { navigate('/'); return null; }
   const p = player; // non-null after guard
@@ -301,6 +303,57 @@ export default function StatsScreen() {
                 Belt upgrades unlock more slots:<br/>
                 {BELTS.map(b => `${b.charAt(0).toUpperCase() + b.slice(1)}: ${BELT_MOVE_SLOTS[b]}`).join(' → ')}
               </div>
+            </div>
+          </>
+        )}
+
+        {tab === 'items' && (
+          <>
+            <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8 }}>INVENTORY</div>
+              {Object.keys(prog.inventory || {}).length === 0 && (
+                <div style={{ fontSize: 'var(--fs-xs)', color: '#555', textAlign: 'center', padding: 12 }}>
+                  No items. Visit a gym shop to buy supplies.
+                </div>
+              )}
+              {Object.entries(prog.inventory || {}).map(([itemId, qty]) => {
+                const item = getItem(itemId);
+                if (!item || qty <= 0) return null;
+                return (
+                  <div key={itemId} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '8px 4px', borderBottom: '1px solid #1a1a1a',
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: '#ddd' }}>{item.name} x{qty}</div>
+                      <div style={{ fontSize: 7, color: '#888', marginTop: 2 }}>{item.description}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const used = useItem(itemId);
+                        if (!used) return;
+                        // Apply effect
+                        if (item.effect.type === 'boost-ev') {
+                          const stat = item.effect.stat as StatKey;
+                          p.evs[stat] = Math.min(252, p.evs[stat] + item.effect.amount);
+                          saveP(p);
+                          setPlayer({ ...p });
+                        }
+                        // HP/stamina effects apply at battle start — just show confirmation
+                        // Force re-render by updating player
+                        setPlayer({ ...p });
+                      }}
+                      style={{
+                        padding: '6px 10px', background: '#1a2a1a',
+                        border: '1px solid #22c55e', color: '#22c55e',
+                        fontSize: 7,
+                      }}
+                    >
+                      USE
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
