@@ -246,11 +246,10 @@ function executeMove(
     attacker.currentStamina = Math.min(attacker.maxStamina, attacker.currentStamina + recovery);
     if (attacker.currentStamina > attacker.maxStamina * 0.2) attacker.isGassed = false;
     attacker.lastMoveId = null;
+    state.log.push(`${attackerName} stalls and recovers stamina (+${recovery})`);
     if (attacker.momentum > 0) {
       attacker.momentum = 0;
-      state.log.push(`Momentum reset!`);
     }
-    state.log.push(`${attackerName} stalls and recovers stamina (+${recovery})`);
     return;
   }
 

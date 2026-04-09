@@ -101,6 +101,6 @@ export function getEffectivenessText(defender: BattleGrappler, move: Move): stri
   const eff = getStyleEffectiveness(move.style, defender.grappler.style);
   if (eff >= 2.0) return "It's super effective!";
   if (eff >= 1.5) return "It's effective!";
-  if (eff <= 0.5) return "Not very effective...";
+  // Don't show "not very effective" — it's noise that clutters the log
   return '';
 }
