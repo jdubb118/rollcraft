@@ -82,7 +82,7 @@ export default function CreateScreen() {
     "The mats are warm. Music is playing.",
     "Class is already underway.",
     "",
-    `A voice from the front: "${coach}."`,
+    "The head coach walks over.",
     `"Hey — first day? Welcome."`,
     `"Don't overthink it. Don't get frustrated."`,
     `"Make yourself at home."`,
@@ -92,10 +92,10 @@ export default function CreateScreen() {
     "Who do you partner with?",
   ];
 
-  // Auto-advance cinematic
+  // Auto-advance cinematic text (waits for tap at end)
   useEffect(() => {
     if (phase !== 'cinematic') return;
-    if (textLine >= cinematicLines.length) { setPhase('choice'); return; }
+    if (textLine >= cinematicLines.length) return; // wait for tap
     const line = cinematicLines[textLine];
     const delay = line === "" ? 800 : line.length < 25 ? 1500 : 2000;
     const timer = setTimeout(() => setTextLine(i => i + 1), delay);
@@ -106,7 +106,7 @@ export default function CreateScreen() {
   useEffect(() => {
     if (phase !== 'training' || selectedPath === null) return;
     const path = STARTER_PATHS[selectedPath];
-    if (textLine >= path.narrative.length) { setPhase('moves-unlocked'); return; }
+    if (textLine >= path.narrative.length) return; // wait for tap
     const timer = setTimeout(() => setTextLine(i => i + 1), 2000);
     return () => clearTimeout(timer);
   }, [phase, textLine, selectedPath]);
@@ -141,18 +141,7 @@ export default function CreateScreen() {
 
   useEffect(() => {
     if (phase !== 'rival-aftermath') return;
-    if (textLine >= aftermathLines.length) {
-      // Save player and enter the game
-      if (selectedPath !== null) {
-        const path = STARTER_PATHS[selectedPath];
-        const player = createPlayerGrappler(path, name.trim(), GI_COLORS[giColor].primary, gymName.trim(), coachName.trim());
-        savePlayer(player);
-        // Mark story flag
-        localStorage.setItem('rollcraft-story-rival-origin', 'true');
-        navigate('/overworld');
-      }
-      return;
-    }
+    if (textLine >= aftermathLines.length) return; // wait for tap
     const line = aftermathLines[textLine];
     const delay = line === "" ? 1000 : 2000;
     const timer = setTimeout(() => setTextLine(i => i + 1), delay);
@@ -161,11 +150,15 @@ export default function CreateScreen() {
 
   // ── Handlers ──
   const handleTap = () => {
-    if (phase === 'cinematic') { setTextLine(cinematicLines.length); setPhase('choice'); }
-    else if (phase === 'training' && selectedPath !== null) {
-      setTextLine(STARTER_PATHS[selectedPath].narrative.length); setPhase('moves-unlocked');
-    }
-    else if (phase === 'rival-aftermath') {
+    // Don't allow skipping cinematics — only proceed when text is done
+    if (phase === 'cinematic' && textLine >= cinematicLines.length) {
+      setPhase('choice');
+    } else if (phase === 'training' && selectedPath !== null) {
+      const path = STARTER_PATHS[selectedPath];
+      if (textLine >= path.narrative.length) setPhase('moves-unlocked');
+    } else if (phase === 'rival-intro') {
+      // no skip — wait for button
+    } else if (phase === 'rival-aftermath' && textLine >= aftermathLines.length) {
       if (selectedPath !== null) {
         const path = STARTER_PATHS[selectedPath];
         const player = createPlayerGrappler(path, name.trim(), GI_COLORS[giColor].primary, gymName.trim(), coachName.trim());
@@ -178,10 +171,8 @@ export default function CreateScreen() {
 
   const isCinematic = ['cinematic', 'training', 'rival-intro', 'rival-aftermath'].includes(phase);
 
-  // Force clean repaint on phase change by using key
   return (
     <div
-      key={phase}
       onClick={isCinematic ? handleTap : undefined}
       className="game-shell"
       style={{ justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 }}
@@ -271,6 +262,9 @@ export default function CreateScreen() {
               </div>
             );
           })}
+          {textLine >= cinematicLines.length && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 16 }} className="blink">TAP TO CONTINUE</div>
+          )}
         </div>
       )}
 
@@ -307,6 +301,9 @@ export default function CreateScreen() {
               {line}
             </div>
           ))}
+          {selectedPath !== null && textLine >= STARTER_PATHS[selectedPath].narrative.length && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 16 }} className="blink">TAP TO CONTINUE</div>
+          )}
         </div>
       )}
 
@@ -388,7 +385,9 @@ export default function CreateScreen() {
               </div>
             );
           })}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">TAP TO CONTINUE</div>
+          {textLine >= aftermathLines.length && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 16 }} className="blink">TAP TO CONTINUE</div>
+          )}
         </div>
       )}
 
