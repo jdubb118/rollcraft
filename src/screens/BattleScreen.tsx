@@ -300,7 +300,7 @@ export default function BattleScreen() {
           className="no-scrollbar"
           style={{
             fontSize: 'var(--fs-sm)', padding: '4px 12px',
-            maxHeight: isOver ? 250 : 130, overflowY: 'auto', lineHeight: 1.6,
+            maxHeight: isOver ? 150 : 130, overflowY: 'auto', lineHeight: 1.6,
             wordBreak: 'break-word',
             background: '#0d0d1a', borderTop: '1px solid #222', borderBottom: '1px solid #222',
           }}
@@ -334,18 +334,17 @@ export default function BattleScreen() {
         )}
 
         {isOver && (
-          <div style={{ textAlign: 'center', padding: '8px 16px', paddingBottom: 24 }}>
+          <div style={{ textAlign: 'center', padding: '4px 16px 16px' }}>
             <div style={{
-              fontSize: 'var(--fs-xxl)',
+              fontSize: 'var(--fs-lg)',
               color: state.winner === 'player' ? '#22c55e' : state.winner === null ? '#888' : '#ef4444',
-              animation: 'pulse 1s infinite',
             }}>
               {state.winner === 'player' ? 'YOU WIN!' : state.winner === null ? 'DRAW' : 'YOU LOSE!'}
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: '#888', marginTop: 4 }}>
-              {state.winMethod === 'submission' ? 'by SUBMISSION' :
-               state.winMethod === 'points' ? 'by POINTS' :
-               state.winMethod === 'advantages' ? 'by ADVANTAGES' : ''}
+              <span style={{ fontSize: 'var(--fs-xs)', color: '#888', marginLeft: 8 }}>
+                {state.winMethod === 'submission' ? 'by SUBMISSION' :
+                 state.winMethod === 'points' ? 'by POINTS' :
+                 state.winMethod === 'advantages' ? 'by ADVANTAGES' : ''}
+              </span>
             </div>
             <button
               onClick={() => {
@@ -360,8 +359,8 @@ export default function BattleScreen() {
                 }
               }}
               style={{
-                marginTop: 12, padding: '10px 24px', background: '#1a1a2e',
-                color: '#ffd700', fontSize: 'var(--fs-sm)', border: '2px solid #ffd700',
+                marginTop: 8, padding: '12px 40px', background: '#ffd700',
+                color: '#000', fontSize: 'var(--fs-sm)', border: 'none',
               }}
             >
               CONTINUE
