@@ -1,5 +1,73 @@
 # Grapple Quest Changelog
 
+## v1.2.0 — AI Sprites + Polish (April 9, 2026)
+
+### AI-Generated Sprites (PixelLab Integration)
+- 5 belt evolution sprites: wimpy white belt → zen black belt master
+- Visual progression — fighter gets bigger, more muscular, more confident per belt
+- Sprites render in battle canvas at 2x scale (64px)
+- Preloaded on app start, cached in memory
+- Priority system: custom sprite > belt sprite > programmatic sprite
+
+### Sprite Creator
+- Upload photo → AI converts to 32x32 pixel art fighter
+- Generate belt-specific sprite without photo
+- Preview at 4x zoom before saving
+- Netlify Function backend (PIXELLAB_SECRET env var)
+- Accessible from MENU → SPRITE button
+
+### Move XP / Technique Mastery
+- Every move gains XP when used (3 per hit, 1 per miss)
+- 10 mastery levels: New → Familiar → Practiced → ... → Mastered
+- Per level: +1 accuracy, +2 power, -0.5 stamina cost
+- Results screen shows TECHNIQUE GROWTH section
+- Move Dex shows mastery level per move
+
+### Screen Transitions
+- All screens fade in (0.25s CSS animation)
+
+### Rival at Tournaments
+- Kenzo dialogue appears at tournament registration (first time per tournament)
+
+### Balance Changes
+- Stat formula floor +5 → +8 (white belt stats more viable)
+- Match turns: white 12, blue 14, purple 16, brown 18, black 22
+- Win money: $35 + turns*2 (up from $25)
+- EV training items: $50 (down from $80)
+- XP scales by opponent belt (1x white → 3x black)
+- Random encounter rate: 8% per step (was 15%, was also firing every frame)
+
+### Bug Fixes
+- Items tab now visible in StatsScreen (was built but not in tab bar)
+- Consumable items auto-apply at battle start (tape, acai, electrolytes, gel)
+- Rival style map covers all 8 archetypes (was only 3)
+- JSON.parse safety on all save/load (crash prevention)
+- Recursive executeMove depth limit (prevents infinite loop)
+- Random encounters only fire on step completion (not every frame)
+- 3 duplicate move IDs fixed (clock-choke, kob-armbar, ns-to-mount)
+- Summit City stamp requirement 8 → 7 (was impossible)
+- Coral Bay tournament desk NPC added (was missing)
+- Bracket name generator safety valve (prevents infinite loop)
+- clearAll() removes ALL rollcraft-* localStorage keys
+- World map two-tap travel (first tap = info, second = travel)
+- NPC wins tracked by name (Scramble Valley actually unlockable)
+- 404 catch-all route added
+
+### Regions 3-9
+- Old Town: Master Tanaka (controller), 3 NPCs, Old Town Classic tournament
+- Steel Mountain: Iron Mike (wrestler), 3 NPCs, Steel Invitational
+- Coral Bay: Marina (guard-player), 3 NPCs + tournament desk, Coral Bay Pro
+- Sambo District: Viktor (judoka), 3 NPCs, Sambo Cup
+- Nova Camp: Dr. Yun (sub-hunter), 3 NPCs, Nova Pro (SUB-ONLY)
+- Iron Coast: The Professor (pressure), 3 NPCs, Grand Prix ($10K gold)
+- Summit City: World Championship ($25K gold), The Ghost, legends
+
+### New Moves
+- 18 gap-filling moves for weak positions (KOB bottom, NS bottom, turtle, etc.)
+- Boot & Scoot (universal leg entanglement escape)
+- Can Opener + Standing Guard Break (closed guard top)
+- Half-guard bottom submissions unlocked (kimura, electric chair, baseball choke)
+
 ## v1.0.0 — Launch (April 8-9, 2026)
 
 ### Combat Engine
