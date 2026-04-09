@@ -178,8 +178,10 @@ export default function CreateScreen() {
 
   const isCinematic = ['cinematic', 'training', 'rival-intro', 'rival-aftermath'].includes(phase);
 
+  // Force clean repaint on phase change by using key
   return (
     <div
+      key={phase}
       onClick={isCinematic ? handleTap : undefined}
       className="game-shell"
       style={{ justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 }}
