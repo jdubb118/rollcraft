@@ -394,7 +394,8 @@ function executeMove(
     const staminaDrain = Math.floor(damage * 0.5);
     deductStamina(defender, staminaDrain);
 
-    const hpDamage = move.category === 'submission' ? damage : Math.floor(damage * 0.15);
+    // Non-submission moves do minimal HP damage (positional, not harmful)
+    const hpDamage = Math.floor(damage * 0.15);
     defender.currentHp = Math.max(0, defender.currentHp - hpDamage);
 
     const critText = isCrit ? ' CRITICAL!' : '';

@@ -53,7 +53,7 @@ export default function OverworldScreen() {
   const [dialogueText, setDialogueText] = useState<string>('');
   const [menuOptions, setMenuOptions] = useState<MenuOption[] | null>(null);
   const [menuIndex, setMenuIndex] = useState(0);
-  const [currentRegionId, setCurrentRegionId] = useState('home');
+  const [, setCurrentRegionId] = useState('home');
   const regionRef = useRef(getRegionMap('home')!);
   const [arrivalText, setArrivalText] = useState<string[] | null>(null);
   const navigate = useNavigate();
@@ -359,7 +359,7 @@ export default function OverworldScreen() {
     if (npc.def.role === 'training-partner') {
       // Show difficulty label
       const oppLevel = BELTS.indexOf(npc.def.belt) * 15 + 5;
-      const playerLevel = getLevel(player);
+      const playerLevel = getLevel(player!);
       const diff = getDifficulty(playerLevel, oppLevel);
       options.push({ label: `LET'S ROLL [${diff.label}]`, action: 'roll' });
     }

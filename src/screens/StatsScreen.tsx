@@ -24,36 +24,37 @@ export default function StatsScreen() {
   const [tab, setTab] = useState<'stats' | 'moves'>('stats');
 
   if (!player) { navigate('/'); return null; }
+  const p = player; // non-null after guard
 
-  const level = getLevel(player);
-  const stats = computeStats(player);
-  const nextBelt = getNextBelt(player.belt);
-  const currentThreshold = BELT_XP_THRESHOLDS[player.belt];
+  const level = getLevel(p);
+  const stats = computeStats(p);
+  const nextBelt = getNextBelt(p.belt);
+  const currentThreshold = BELT_XP_THRESHOLDS[p.belt];
   const nextThreshold = nextBelt ? BELT_XP_THRESHOLDS[nextBelt] : currentThreshold + 5000;
-  const xpProgress = ((player.xp - currentThreshold) / (nextThreshold - currentThreshold)) * 100;
-  const styleColor = STYLE_COLORS[player.style];
-  const moveSlots = BELT_MOVE_SLOTS[player.belt];
+  const xpProgress = ((p.xp - currentThreshold) / (nextThreshold - currentThreshold)) * 100;
+  const styleColor = STYLE_COLORS[p.style];
+  const moveSlots = BELT_MOVE_SLOTS[p.belt];
   const prog = loadProgression();
 
   // Ensure learnedMoves exists (backward compat)
-  if (!player.learnedMoves) player.learnedMoves = [...player.moves];
+  if (!p.learnedMoves) p.learnedMoves = [...p.moves];
 
-  const equippedSet = new Set(player.moves);
-  const poolMoves = player.learnedMoves.filter(id => !equippedSet.has(id));
+  const equippedSet = new Set(p.moves);
+  const poolMoves = p.learnedMoves.filter(id => !equippedSet.has(id));
 
   function equipMove(moveId: string) {
-    if (player.moves.length >= moveSlots) return;
-    if (player.moves.includes(moveId)) return;
-    player.moves.push(moveId);
-    savePlayer(player);
-    setPlayer({ ...player });
+    if (p.moves.length >= moveSlots) return;
+    if (p.moves.includes(moveId)) return;
+    p.moves.push(moveId);
+    savePlayer(p);
+    setPlayer({ ...p });
   }
 
   function unequipMove(moveId: string) {
-    if (player.moves.length <= 1) return; // must keep at least 1
-    player.moves = player.moves.filter(id => id !== moveId);
-    savePlayer(player);
-    setPlayer({ ...player });
+    if (p.moves.length <= 1) return; // must keep at least 1
+    p.moves = p.moves.filter(id => id !== moveId);
+    savePlayer(p);
+    setPlayer({ ...p });
   }
 
   return (
@@ -98,19 +99,19 @@ export default function StatsScreen() {
             {/* Name + Belt */}
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--fs-xl)', color: '#fff', marginBottom: 4 }}>
-                {player.name.toUpperCase()}
+                {p.name.toUpperCase()}
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center' }}>
                 <span style={{
-                  fontSize: 'var(--fs-sm)', color: BELT_COLORS[player.belt],
-                  border: `1px solid ${BELT_COLORS[player.belt]}`,
+                  fontSize: 'var(--fs-sm)', color: BELT_COLORS[p.belt],
+                  border: `1px solid ${BELT_COLORS[p.belt]}`,
                   padding: '2px 8px',
                 }}>
-                  {player.belt.toUpperCase()} BELT
+                  {p.belt.toUpperCase()} BELT
                 </span>
                 <span style={{ fontSize: 'var(--fs-sm)', color: '#aaa' }}>LV {level}</span>
                 <span style={{ fontSize: 'var(--fs-sm)', color: styleColor }}>
-                  {STYLE_NAMES[player.style]}
+                  {STYLE_NAMES[p.style]}
                 </span>
               </div>
             </div>
@@ -121,7 +122,7 @@ export default function StatsScreen() {
                 display: 'flex', justifyContent: 'space-between',
                 fontSize: 'var(--fs-xs)', color: '#888', marginBottom: 6,
               }}>
-                <span>{player.xp} XP</span>
+                <span>{p.xp} XP</span>
                 <span>{nextBelt ? `${nextThreshold} for ${nextBelt.toUpperCase()}` : 'MAX RANK'}</span>
               </div>
               <div style={{ width: '100%', height: 10, background: '#222', border: '1px solid #333' }}>
@@ -131,7 +132,7 @@ export default function StatsScreen() {
                   transition: 'width 0.5s',
                 }} />
               </div>
-              {nextBelt && player.xp >= nextThreshold && (
+              {nextBelt && p.xp >= nextThreshold && (
                 <div style={{
                   fontSize: 'var(--fs-xs)', color: '#ffd700', marginTop: 6, textAlign: 'center',
                 }} className="blink">
@@ -176,7 +177,7 @@ export default function StatsScreen() {
               <div style={{ fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8 }}>BELT PROGRESSION</div>
               <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                 {BELTS.map(belt => {
-                  const isCurrentOrPast = BELTS.indexOf(belt) <= BELTS.indexOf(player.belt);
+                  const isCurrentOrPast = BELTS.indexOf(belt) <= BELTS.indexOf(p.belt);
                   return (
                     <div key={belt} style={{
                       width: 40, height: 10,
@@ -213,11 +214,11 @@ export default function StatsScreen() {
                 display: 'flex', justifyContent: 'space-between',
               }}>
                 <span>EQUIPPED</span>
-                <span style={{ color: player.moves.length >= moveSlots ? '#ef4444' : '#22c55e' }}>
-                  {player.moves.length}/{moveSlots} SLOTS
+                <span style={{ color: p.moves.length >= moveSlots ? '#ef4444' : '#22c55e' }}>
+                  {p.moves.length}/{moveSlots} SLOTS
                 </span>
               </div>
-              {player.moves.map(moveId => {
+              {p.moves.map(moveId => {
                 const move = getMove(moveId);
                 if (!move) return null;
                 const mColor = STYLE_COLORS[move.style];
@@ -237,11 +238,11 @@ export default function StatsScreen() {
                     </div>
                     <button
                       onClick={() => unequipMove(moveId)}
-                      disabled={player.moves.length <= 1}
+                      disabled={p.moves.length <= 1}
                       style={{
                         padding: '4px 8px', background: '#2a1a1a',
                         border: '1px solid #ef4444', color: '#ef4444',
-                        fontSize: 7, opacity: player.moves.length <= 1 ? 0.3 : 1,
+                        fontSize: 7, opacity: p.moves.length <= 1 ? 0.3 : 1,
                       }}
                     >
                       REMOVE
@@ -261,7 +262,7 @@ export default function StatsScreen() {
                   const move = getMove(moveId);
                   if (!move) return null;
                   const mColor = STYLE_COLORS[move.style];
-                  const canEquip = player.moves.length < moveSlots;
+                  const canEquip = p.moves.length < moveSlots;
                   return (
                     <div key={moveId} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',

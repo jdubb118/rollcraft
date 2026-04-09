@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { loadPlayer, saveOpponent, loadProgression, spendMoney, addMoney, saveBattleResult, loadBattleResult, updateProgression } from '../state/saveLoad';
+import { loadPlayer, saveOpponent, loadProgression, spendMoney, addMoney, loadBattleResult, updateProgression } from '../state/saveLoad';
 import { getTournament, generateBracket } from '../data/tournaments';
 import { STYLE_NAMES, STYLE_COLORS } from '../engine/constants';
 import type { Grappler, TournamentResult } from '../engine/types';
@@ -24,7 +24,7 @@ export default function TournamentScreen() {
   const [phase, setPhase] = useState<TourneyPhase>('registration');
   const [bracket, setBracket] = useState<Grappler[]>([]);
   const [currentRound, setCurrentRound] = useState(0);
-  const [currentMatch, setCurrentMatch] = useState(0);
+  const [, setCurrentMatch] = useState(0);
   const [matches, setMatches] = useState<BracketMatch[]>([]);
   const [eliminated, setEliminated] = useState(false);
   const [placement, setPlacement] = useState<'gold' | 'silver' | 'bronze' | 'out'>('out');
@@ -75,7 +75,6 @@ export default function TournamentScreen() {
     const allFighters = [player!, ...opponents];
 
     // Create bracket matches
-    const totalRounds = Math.log2(tournament!.bracketSize);
     const roundMatches: BracketMatch[] = [];
 
     // First round — pair up fighters
