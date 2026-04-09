@@ -47,7 +47,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     if (body.photo) {
       // Photo-to-pixel-art conversion
-      result = await fetch('https://api.pixellab.ai/v2/generate-image-v2', {
+      result = await fetch('https://api.pixellab.ai/v2/create-image-pixflux', {
         method: 'POST', headers,
         body: JSON.stringify({
           description: body.description || 'BJJ fighter in gi, front facing, full body, pixel art game character sprite',
@@ -70,7 +70,7 @@ export default async function handler(req: Request): Promise<Response> {
         ? `${beltDescriptions[body.belt]}, front facing, full body, pixel art game character sprite`
         : body.description || 'BJJ fighter in white gi, standing stance, front facing, full body, pixel art character sprite';
 
-      result = await fetch('https://api.pixellab.ai/v2/generate-image-v2', {
+      result = await fetch('https://api.pixellab.ai/v2/create-image-pixflux', {
         method: 'POST', headers,
         body: JSON.stringify({
           description: desc,

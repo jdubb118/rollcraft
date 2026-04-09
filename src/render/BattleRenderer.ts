@@ -1,5 +1,6 @@
 import type { BattleState } from '../engine/types';
 import { getGrapplerSprite, getPlayerSprite, SPRITE_W, SPRITE_H } from './SpriteData';
+import { getBeltSprite, getCustomSprite } from './BeltSprites';
 import { getRole, getPositionDisplayName } from '../data/positions';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import { getLevel } from '../battle/stats';
@@ -92,13 +93,31 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   ctx.restore();
 
   // Draw player (bottom-left, facing right)
-  const playerGi = state.player.grappler.giColor;
-  const playerSprite = playerGi
-    ? getPlayerSprite(playerGi, scale, state.player.grappler.belt)
-    : getGrapplerSprite(state.player.grappler.style, scale, state.player.grappler.belt);
+  // Priority: custom sprite > belt evolution sprite > programmatic sprite
+  const customSpriteData = state.player.grappler.customSprite;
+  const beltImg = customSpriteData
+    ? getCustomSprite(customSpriteData)
+    : getBeltSprite(state.player.grappler.belt);
+
+  let playerSprite: HTMLCanvasElement | HTMLImageElement;
+  if (beltImg) {
+    playerSprite = beltImg;
+  } else {
+    const playerGi = state.player.grappler.giColor;
+    playerSprite = playerGi
+      ? getPlayerSprite(playerGi, scale, state.player.grappler.belt)
+      : getGrapplerSprite(state.player.grappler.style, scale, state.player.grappler.belt);
+  }
   const plX = 80;
-  const plY = CANVAS_HEIGHT - 60 - SPRITE_H * scale;
-  ctx.drawImage(playerSprite, plX, plY);
+  if (beltImg) {
+    // AI sprite is 32x32, draw at 2x to match canvas scale (~64px)
+    const aiScale = 2;
+    const plY = CANVAS_HEIGHT - 60 - 32 * aiScale;
+    ctx.drawImage(playerSprite, plX, plY, 32 * aiScale, 32 * aiScale);
+  } else {
+    const plY = CANVAS_HEIGHT - 60 - SPRITE_H * scale;
+    ctx.drawImage(playerSprite, plX, plY);
+  }
 
   // Hit flash (subtler)
   if (animFrame > 0 && animFrame < 3) {

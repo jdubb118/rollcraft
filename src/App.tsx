@@ -11,6 +11,10 @@ import TournamentScreen from './screens/TournamentScreen'
 import MoveDexScreen from './screens/MoveDexScreen'
 import SpriteCreatorScreen from './screens/SpriteCreatorScreen'
 import { Navigate } from 'react-router-dom'
+import { preloadBeltSprites } from './render/BeltSprites'
+
+// Preload AI sprites on app start
+preloadBeltSprites();
 
 export default function App() {
   return (
