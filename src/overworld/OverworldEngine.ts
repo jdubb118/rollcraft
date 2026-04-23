@@ -33,6 +33,7 @@ export function createOverworldState(
     interactingNPC: null,
     dialogueText: null,
     menuOptions: null,
+    animationFrame: 0,
   };
 }
 
@@ -54,6 +55,8 @@ export function updateOverworld(
   input: { up: boolean; down: boolean; left: boolean; right: boolean },
   dt: number,
 ): void {
+  state.animationFrame += dt * 60; // ~60 "frames" per second for tile anim math
+
   // Don't move while interacting
   if (state.interactingNPC) return;
 

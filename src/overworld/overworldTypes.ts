@@ -59,6 +59,7 @@ export interface OverworldState {
   interactingNPC: string | null; // NPC id
   dialogueText: string | null;
   menuOptions: MenuOption[] | null;
+  animationFrame: number; // RAF-tick counter for ambient tile/sprite animation
 }
 
 export interface MenuOption {

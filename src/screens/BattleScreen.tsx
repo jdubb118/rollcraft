@@ -3,33 +3,95 @@ import { useNavigate } from 'react-router-dom';
 import type { BattleState } from '../engine/types';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import { createBattleState, getPlayerMoves, executeTurn } from '../battle/BattleEngine';
-import { renderBattle } from '../render/BattleRenderer';
+import { renderBattle, BATTLE_ANCHORS } from '../render/BattleRenderer';
+import type { BattleEffects } from '../render/BattleRenderer';
 import { getRole, getPositionDisplayName } from '../data/positions';
 import MovePanel from '../components/MovePanel';
 import { loadPlayer, loadOpponent, saveBattleResult, isScouted, markScouted, getInventory, useItem } from '../state/saveLoad';
 import ScoutPanel from '../components/ScoutPanel';
 import { sfxHit, sfxCritical, sfxMiss, sfxSubmissionLock, sfxTap, sfxPointsScored, sfxTimeUp, sfxStunned, sfxEscape, sfxMenuSelect, initAudio } from '../engine/sound';
+import { createParticleSystem, type ParticleSystem } from '../engine/particles';
 
-function playSoundsForLines(lines: string[]) {
+interface ShakeState { amount: number; endsAt: number; }
+interface FlashState { color: string; until: number; strength: number; }
+
+function processBattleBeat(
+  lines: string[],
+  target: { x: number; y: number },
+  particles: ParticleSystem,
+  shakeRef: { current: ShakeState },
+  flashRef: { current: FlashState },
+) {
   const text = lines.join('\n');
-  if (text.includes('taps out') || text.includes('SUBMISSION')) sfxTap();
-  else if (text.includes('CRITICAL')) sfxCritical();
-  else if (text.includes('connects')) sfxHit();
-  else if (text.includes('missed') || text.includes('goes nowhere')) sfxMiss();
-  if (text.includes('tightening') || text.includes('VERY TIGHT') || text.includes('LOCKED IN')) sfxSubmissionLock();
-  if (text.includes('⚡') && text.includes('points')) sfxPointsScored();
+  const now = Date.now();
+  const setShake = (amount: number, ms: number) => {
+    shakeRef.current = { amount, endsAt: now + ms };
+  };
+  const setFlash = (color: string, ms: number, strength = 0.35) => {
+    flashRef.current = { color, until: now + ms, strength };
+  };
+
+  if (text.includes('taps out') || text.includes('SUBMISSION')) {
+    sfxTap();
+    particles.spawn({ x: target.x, y: target.y, kind: 'ring', color: '#ff6b6b', maxLife: 0.9, size: 4 });
+    setShake(4, 420);
+    setFlash('rgba(255,107,107,0.4)', 150, 0.4);
+  } else if (text.includes('CRITICAL')) {
+    sfxCritical();
+    particles.spawnBurst('spark', target.x, target.y, 8, { color: '#ffd700', maxLife: 0.45, size: 2 });
+    setShake(5, 280);
+    setFlash('rgba(255,80,80,0.45)', 100, 0.45);
+  } else if (text.includes('connects')) {
+    sfxHit();
+    particles.spawnBurst('dust', target.x, target.y + 4, 5, { color: '#d4a574', maxLife: 0.5, size: 2, gravity: 60 });
+    setShake(2, 160);
+    setFlash('rgba(255,255,255,0.3)', 80, 0.3);
+  } else if (text.includes('missed') || text.includes('goes nowhere')) {
+    sfxMiss();
+    for (let i = 0; i < 3; i++) {
+      particles.spawn({
+        x: target.x + (Math.random() - 0.5) * 10, y: target.y,
+        vx: (Math.random() - 0.5) * 100, vy: -20 + (Math.random() - 0.5) * 20,
+        kind: 'streak', color: '#aaa', maxLife: 0.22, size: 1,
+      });
+    }
+  }
+  if (text.includes('tightening') || text.includes('VERY TIGHT') || text.includes('LOCKED IN')) {
+    sfxSubmissionLock();
+    particles.spawn({ x: target.x, y: target.y, kind: 'ring', color: '#ef4444', maxLife: 0.7, size: 3 });
+    setShake(3, 260);
+  }
+  if (text.includes('⚡') && text.includes('points')) {
+    sfxPointsScored();
+    const m = text.match(/\+(\d+)\s*(?:⚡\s*)?points?/);
+    const label = m ? `+${m[1]}` : '+2';
+    particles.spawn({
+      x: target.x, y: target.y - 8,
+      vx: 0, vy: -30,
+      kind: 'float', text: label, color: '#ffd700', maxLife: 0.9, size: 8,
+    });
+    setFlash('rgba(255,215,0,0.3)', 100, 0.3);
+  }
   if (text.includes('⏱ TIME')) sfxTimeUp();
-  if (text.includes('STUNNED')) sfxStunned();
+  if (text.includes('STUNNED')) {
+    sfxStunned();
+    setShake(3, 250);
+  }
   if (text.includes('Escaped') || text.includes('retained') || text.includes('Scrambled')) sfxEscape();
 }
 
 export default function BattleScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showScout, setShowScout] = useState(false);
   const [state, setState] = useState<BattleState | null>(null);
   const [animFrame, setAnimFrame] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const shakeRef = useRef<ShakeState>({ amount: 0, endsAt: 0 });
+  const flashRef = useRef<FlashState>({ color: '', until: 0, strength: 0 });
+  const particlesRef = useRef<ParticleSystem>(createParticleSystem(60));
 
   // Initialize battle
   useEffect(() => {
@@ -51,17 +113,61 @@ export default function BattleScreen() {
     setState(battleState);
   }, [navigate]);
 
-  // Render canvas
+  // Render canvas — RAF loop drives idle breath, shake decay, particle animation
   useEffect(() => {
-    if (!state || !canvasRef.current) return;
+    if (!state || !canvasRef.current || !effectsCanvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
+    const fxCanvas = effectsCanvasRef.current;
+    const fxCtx = fxCanvas.getContext('2d')!;
+    fxCtx.imageSmoothingEnabled = false;
     // Get current region for battle background
     const regionId = localStorage.getItem('rollcraft-progression')
       ? (JSON.parse(localStorage.getItem('rollcraft-progression') || '{}').currentRegionId || 'home')
       : 'home';
-    renderBattle(ctx, state, animFrame, regionId);
+
+    let rafId = 0;
+    let stopped = false;
+    let lastTime = 0;
+    const frame = (time: number) => {
+      if (stopped) return;
+      const dt = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+
+      // Compute shake offset (decays to 0 by endsAt)
+      const now = Date.now();
+      const shake = shakeRef.current;
+      const remaining = Math.max(0, shake.endsAt - now);
+      const shakeT = shake.endsAt > 0 ? remaining / Math.max(1, shake.endsAt - (shake.endsAt - 400)) : 0;
+      const mag = shake.amount * shakeT;
+      const shakeX = mag > 0 ? (Math.random() - 0.5) * 2 * mag : 0;
+      const shakeY = mag > 0 ? (Math.random() - 0.5) * 2 * mag : 0;
+
+      // Flash
+      const flash = flashRef.current;
+      const flashRemaining = Math.max(0, flash.until - now);
+      const flashTotal = 160; // assume ~max flash duration for normalization
+      const flashAlpha = flash.color
+        ? Math.min(flash.strength, flash.strength * (flashRemaining / flashTotal))
+        : 0;
+      const effects: BattleEffects = {
+        shakeX, shakeY,
+        flashColor: flashAlpha > 0 ? flash.color : undefined,
+        flashAlpha: flashAlpha > 0 ? flashAlpha : undefined,
+      };
+
+      renderBattle(ctx, state, animFrame, regionId, effects);
+
+      // Update + render particles
+      particlesRef.current.update(dt, { w: CANVAS_WIDTH, h: CANVAS_HEIGHT });
+      fxCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      particlesRef.current.render(fxCtx);
+
+      rafId = requestAnimationFrame(frame);
+    };
+    rafId = requestAnimationFrame(frame);
+    return () => { stopped = true; cancelAnimationFrame(rafId); };
   }, [state, animFrame]);
 
   // Auto-scroll log
@@ -93,14 +199,17 @@ export default function BattleScreen() {
     }
     if (splitIdx === 0) splitIdx = newLines.length;
 
+    // firstActor attacks → target the defender. In phase 1 the defender is the opposite of firstActor.
+    const phase1Target = newState.firstActor === 'opponent' ? BATTLE_ANCHORS.playerCenter : BATTLE_ANCHORS.opponentCenter;
+    const phase2Target = newState.firstActor === 'opponent' ? BATTLE_ANCHORS.opponentCenter : BATTLE_ANCHORS.playerCenter;
+
     // Phase 1: first actor's moves (immediate)
     const phase1 = { ...newState, log: [...state.log, ...newLines.slice(0, splitIdx)], phase: 'animating' as const };
     setState(phase1);
     setAnimFrame(1);
     setTimeout(() => setAnimFrame(0), 250);
 
-    // Play sounds for first actor's lines
-    playSoundsForLines(newLines.slice(0, splitIdx));
+    processBattleBeat(newLines.slice(0, splitIdx), phase1Target, particlesRef.current, shakeRef, flashRef);
 
     // Phase 2: second actor's moves (after delay)
     const delay = Math.min(1200, 400 + splitIdx * 150);
@@ -108,8 +217,7 @@ export default function BattleScreen() {
       setState(newState);
       setAnimFrame(2);
       setTimeout(() => setAnimFrame(0), 250);
-      // Play sounds for second actor's lines
-      playSoundsForLines(newLines.slice(splitIdx));
+      processBattleBeat(newLines.slice(splitIdx), phase2Target, particlesRef.current, shakeRef, flashRef);
     }, delay);
 
     if (newState.phase === 'battle-over') {
@@ -232,7 +340,7 @@ export default function BattleScreen() {
       {/* Canvas area */}
       <div style={{
         flex: '1 1 40%', display: 'flex', justifyContent: 'center', alignItems: 'center',
-        overflow: 'hidden', minHeight: 0,
+        overflow: 'hidden', minHeight: 0, position: 'relative',
       }}>
         <canvas
           ref={canvasRef}
@@ -242,6 +350,19 @@ export default function BattleScreen() {
             width: '100%', height: '100%',
             imageRendering: 'pixelated',
             objectFit: 'contain',
+          }}
+        />
+        <canvas
+          ref={effectsCanvasRef}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            imageRendering: 'pixelated',
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            zIndex: 40,
           }}
         />
       </div>
@@ -362,6 +483,7 @@ export default function BattleScreen() {
                   navigate('/results');
                 }
               }}
+              className="breathe"
               style={{
                 marginTop: 8, padding: '12px 40px', background: '#ffd700',
                 color: '#000', fontSize: 'var(--fs-sm)', border: 'none',

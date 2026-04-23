@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# SPA fallback — every non-asset, non-function URL goes to index.html
+# (so /auth/callback, /dev, etc. work on direct load).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

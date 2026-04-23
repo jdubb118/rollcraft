@@ -195,6 +195,8 @@ export interface BattleResult {
 }
 
 // ── World / Region system ──
+export type AmbientParticleKind = 'fireflies' | 'snow' | 'dust' | 'wavemist' | 'leaves' | 'embers';
+
 export interface WorldRegion {
   id: string;
   name: string;
@@ -204,6 +206,8 @@ export interface WorldRegion {
   stampId: string | null;
   stampName: string | null;
   color: string; // for world map display
+  tintColor?: string; // rgba overlay applied on top of overworld + battle bg
+  ambientParticle?: AmbientParticleKind | null;
 }
 
 export interface UnlockRequirement {

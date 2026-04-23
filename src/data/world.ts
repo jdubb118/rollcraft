@@ -1,10 +1,11 @@
-import type { WorldRegion } from '../engine/types';
+import type { WorldRegion, AmbientParticleKind } from '../engine/types';
 
 export const REGIONS: WorldRegion[] = [
   {
     id: 'home', name: 'Home Gym', description: 'Where it all began. Your coach, your mats, your fundamentals.',
     styleSpecialty: null, unlockRequirements: [], stampId: null, stampName: null,
     color: '#ffd700',
+    tintColor: 'rgba(255,180,80,0.10)', ambientParticle: 'dust',
   },
   {
     id: 'scramble-valley', name: 'Scramble Valley',
@@ -12,6 +13,7 @@ export const REGIONS: WorldRegion[] = [
     styleSpecialty: 'berimbolo', stampId: 'scramble', stampName: 'Scramble Stamp',
     unlockRequirements: [{ type: 'npc-wins', value: 2, label: 'Beat 2 training partners at home' }],
     color: '#00bcd4',
+    tintColor: 'rgba(100,200,220,0.12)', ambientParticle: 'leaves',
   },
   {
     id: 'old-town', name: 'Old Town',
@@ -21,6 +23,7 @@ export const REGIONS: WorldRegion[] = [
       { type: 'belt', value: 'blue', label: 'Blue belt required' },
     ],
     color: '#3498db',
+    tintColor: 'rgba(180,140,90,0.16)', ambientParticle: 'dust',
   },
   {
     id: 'steel-mountain', name: 'Steel Mountain',
@@ -31,6 +34,7 @@ export const REGIONS: WorldRegion[] = [
       { type: 'tournament-win', value: 'old-town-classic', label: 'Win Old Town Classic' },
     ],
     color: '#e74c3c',
+    tintColor: 'rgba(120,130,150,0.22)', ambientParticle: 'snow',
   },
   {
     id: 'coral-bay', name: 'Coral Bay',
@@ -40,6 +44,7 @@ export const REGIONS: WorldRegion[] = [
       { type: 'belt', value: 'purple', label: 'Purple belt required' },
     ],
     color: '#2ecc71',
+    tintColor: 'rgba(255,140,100,0.18)', ambientParticle: 'wavemist',
   },
   {
     id: 'sambo-district', name: 'Sambo District',
@@ -50,6 +55,7 @@ export const REGIONS: WorldRegion[] = [
       { type: 'stamp-count', value: 3, label: '3 stamps collected' },
     ],
     color: '#f39c12',
+    tintColor: 'rgba(70,50,90,0.28)', ambientParticle: 'embers',
   },
   {
     id: 'nova-camp', name: 'Nova Camp',
@@ -59,6 +65,7 @@ export const REGIONS: WorldRegion[] = [
       { type: 'belt', value: 'brown', label: 'Brown belt required' },
     ],
     color: '#e91e63',
+    tintColor: 'rgba(180,160,210,0.12)', ambientParticle: null,
   },
   {
     id: 'iron-coast', name: 'Iron Coast',
@@ -69,6 +76,7 @@ export const REGIONS: WorldRegion[] = [
       { type: 'stamp-count', value: 5, label: '5 stamps collected' },
     ],
     color: '#8e44ad',
+    tintColor: 'rgba(90,110,160,0.20)', ambientParticle: 'wavemist',
   },
   {
     id: 'summit-city', name: 'Summit City',
@@ -79,8 +87,14 @@ export const REGIONS: WorldRegion[] = [
       { type: 'stamp-count', value: 7, label: 'All 7 stamps collected' },
     ],
     color: '#ffd700',
+    tintColor: 'rgba(255,200,120,0.14)', ambientParticle: 'embers',
   },
 ];
+
+export function getRegionAtmosphere(regionId: string): { tint?: string; particle?: AmbientParticleKind | null } {
+  const r = REGIONS.find(x => x.id === regionId);
+  return { tint: r?.tintColor, particle: r?.ambientParticle ?? null };
+}
 
 export function getRegion(id: string): WorldRegion | undefined {
   return REGIONS.find(r => r.id === id);

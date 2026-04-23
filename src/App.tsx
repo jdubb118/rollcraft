@@ -10,11 +10,20 @@ import WorldMapScreen from './screens/WorldMapScreen'
 import TournamentScreen from './screens/TournamentScreen'
 import MoveDexScreen from './screens/MoveDexScreen'
 import SpriteCreatorScreen from './screens/SpriteCreatorScreen'
+import SettingsScreen from './screens/SettingsScreen'
+import AuthCallbackScreen from './screens/AuthCallbackScreen'
+import DevPanelScreen from './screens/DevPanelScreen'
 import { Navigate } from 'react-router-dom'
 import { preloadBeltSprites } from './render/BeltSprites'
+import { initAuth } from './engine/auth'
+import { wireCloudSave } from './engine/cloudSave'
 
 // Preload AI sprites on app start
 preloadBeltSprites();
+
+// Boot cloud sync (no-op if env vars missing)
+wireCloudSave();
+initAuth();
 
 export default function App() {
   return (
@@ -30,6 +39,9 @@ export default function App() {
       <Route path="/tournament" element={<TournamentScreen />} />
       <Route path="/movedex" element={<MoveDexScreen />} />
       <Route path="/sprite-creator" element={<SpriteCreatorScreen />} />
+      <Route path="/settings" element={<SettingsScreen />} />
+      <Route path="/auth/callback" element={<AuthCallbackScreen />} />
+      <Route path="/dev" element={<DevPanelScreen />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

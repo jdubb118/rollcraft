@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import type { MenuOption } from '../overworld/overworldTypes';
+import { duckBGM, restoreBGM } from '../engine/audio';
 
 interface DialogueBoxProps {
   speakerName: string;
@@ -10,12 +13,21 @@ interface DialogueBoxProps {
 }
 
 export default function DialogueBox({ speakerName, text, menuOptions, selectedIndex = 0, onMenuSelect, onDismiss }: DialogueBoxProps) {
+  useEffect(() => {
+    duckBGM();
+    return () => { restoreBGM(); };
+  }, []);
+
   return (
-    <div style={{
-      position: 'absolute', bottom: 12, left: 8, right: 8,
-      background: '#0a0a14', border: '3px solid #ffd700',
-      padding: '12px 16px', zIndex: 50,
-    }}>
+    <motion.div
+      initial={{ y: 14, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
+      style={{
+        position: 'absolute', bottom: 12, left: 8, right: 8,
+        background: '#0a0a14', border: '3px solid #ffd700',
+        padding: '12px 16px', zIndex: 50,
+      }}>
       {/* Speaker name */}
       <div style={{
         fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8,
@@ -85,6 +97,6 @@ export default function DialogueBox({ speakerName, text, menuOptions, selectedIn
           ► CONTINUE
         </button>
       )}
-    </div>
+    </motion.div>
   );
 }

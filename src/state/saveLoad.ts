@@ -5,9 +5,16 @@ const OPPONENT_KEY = 'rollcraft-opponent';
 const RESULT_KEY = 'rollcraft-result';
 const PROGRESSION_KEY = 'rollcraft-progression';
 
+// Fire on any save so cloud-sync can pick it up. Dispatched on window so cloudSave.ts
+// can listen without creating a circular import.
+function emitChange() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('rollcraft-save'));
+}
+
 // ── Player ──
 export function savePlayer(grappler: Grappler): void {
   localStorage.setItem(PLAYER_KEY, JSON.stringify(grappler));
+  emitChange();
 }
 
 export function loadPlayer(): Grappler | null {
@@ -25,6 +32,7 @@ export function loadPlayer(): Grappler | null {
 // ── Opponent ──
 export function saveOpponent(grappler: Grappler): void {
   localStorage.setItem(OPPONENT_KEY, JSON.stringify(grappler));
+  emitChange();
 }
 
 export function loadOpponent(): Grappler | null {
@@ -61,6 +69,7 @@ const DEFAULT_PROGRESSION: PlayerProgression = {
 
 export function saveProgression(progression: PlayerProgression): void {
   localStorage.setItem(PROGRESSION_KEY, JSON.stringify(progression));
+  emitChange();
 }
 
 export function loadProgression(): PlayerProgression {

@@ -1,8 +1,9 @@
 /**
  * Grapple Quest Sound System
- * All sounds generated via Web Audio API — zero audio files needed.
- * Short synth tones that feel retro/pixel-art appropriate.
+ * Synth SFX via Web Audio API, routed through user master/sfx volume from settings.
  */
+
+import { getEffectiveSfxVolume } from './settings';
 
 let ctx: AudioContext | null = null;
 
@@ -14,12 +15,14 @@ function getCtx(): AudioContext {
 
 function playTone(freq: number, duration: number, type: OscillatorType = 'square', volume: number = 0.15) {
   try {
+    const v = volume * getEffectiveSfxVolume();
+    if (v <= 0.0005) return;
     const c = getCtx();
     const osc = c.createOscillator();
     const gain = c.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, c.currentTime);
-    gain.gain.setValueAtTime(volume, c.currentTime);
+    gain.gain.setValueAtTime(v, c.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
     osc.connect(gain);
     gain.connect(c.destination);
