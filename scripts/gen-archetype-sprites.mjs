@@ -41,20 +41,31 @@ async function gen(style, belt) {
   }
   const desc = `${STYLES[style]}, ${BELTS[belt]}, ${SHARED}`;
   const start = Date.now();
-  const res = await fetch('https://api.pixellab.ai/v2/create-image-pixflux', {
-    method: 'POST', headers,
-    body: JSON.stringify({
-      description: desc,
-      image_size: { width: 32, height: 32 },
-      no_background: true,
-    }),
-  });
-  const data = await res.json();
-  if (data.image?.base64) {
+  let res, bodyText;
+  try {
+    res = await fetch('https://api.pixellab.ai/v2/create-image-pixflux', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        description: desc,
+        image_size: { width: 32, height: 32 },
+        no_background: true,
+      }),
+    });
+    bodyText = await res.text();
+  } catch (e) {
+    console.log(`  ✗ ${style}/${belt} NETWORK ERROR: ${e.message}`);
+    return;
+  }
+  let data;
+  try { data = JSON.parse(bodyText); }
+  catch { data = null; }
+  if (data?.image?.base64) {
     writeFileSync(filename, Buffer.from(data.image.base64, 'base64'));
     console.log(`  ✓ ${style}/${belt} (${((Date.now()-start)/1000).toFixed(1)}s)`);
   } else {
-    console.log(`  ✗ ${style}/${belt} ERROR: ${JSON.stringify(data).substring(0, 200)}`);
+    console.log(`  ✗ ${style}/${belt} HTTP ${res?.status} ${(bodyText||'').substring(0, 150)}`);
+    // Wait 3s on API error before next call (soft back-off)
+    await new Promise(r => setTimeout(r, 3000));
   }
 }
 
