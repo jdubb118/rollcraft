@@ -17,14 +17,16 @@ import { generateRandomOpponent, shouldTriggerEncounter } from '../data/randomEn
 import { getShopItems } from '../data/items';
 import { addItem } from '../state/saveLoad';
 import { Tile } from '../overworld/tiles';
+import { createParticleSystem, type ParticleSystem } from '../engine/particles';
+import { createAmbientState, tickAmbient, type AmbientState } from '../engine/ambientParticles';
+import { getRegionAtmosphere, REGIONS } from '../data/world';
+import { playRegionBGM } from '../engine/audio';
+import { preloadNPC } from '../render/NPCSprites';
+import { getRegionBG } from '../render/RegionBGs';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 import DPad from '../components/DPad';
 import DialogueBox from '../components/DialogueBox';
-
-function makeId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
 
 // XP values so getLevel() returns appropriate level for each belt
 const BELT_XP_MID: Record<Belt, number> = {
@@ -34,7 +36,7 @@ const BELT_XP_MID: Record<Belt, number> = {
 function npcToGrappler(npc: NPCState): Grappler {
   const def = npc.def;
   return {
-    id: makeId(),
+    id: def.id, // preserve NPC identity so BattleRenderer can load the per-character AI sprite
     name: def.name,
     style: def.style,
     belt: def.belt,
@@ -50,6 +52,7 @@ function npcToGrappler(npc: NPCState): Grappler {
 
 export default function OverworldScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<OverworldState | null>(null);
   const inputRef = useRef({ up: false, down: false, left: false, right: false });
   const [player, setPlayer] = useState<Grappler | null>(null);
@@ -57,11 +60,14 @@ export default function OverworldScreen() {
   const [dialogueText, setDialogueText] = useState<string>('');
   const [menuOptions, setMenuOptions] = useState<MenuOption[] | null>(null);
   const [menuIndex, setMenuIndex] = useState(0);
-  const [, setCurrentRegionId] = useState('home');
+  const [currentRegionId, setCurrentRegionId] = useState('home');
   const regionRef = useRef(getRegionMap('home')!);
+  const regionIdRef = useRef<string>('home');
   const wasMovingRef = useRef(false);
   const [arrivalText, setArrivalText] = useState<string[] | null>(null);
   const navigate = useNavigate();
+  const particlesRef = useRef<ParticleSystem>(createParticleSystem(60));
+  const ambientRef = useRef<AmbientState>(createAmbientState());
 
   // ── Single dispatch ref — keyboard always calls the latest version ──
   const dispatchRef = useRef<(type: 'action' | 'select', action?: string) => void>(() => {});
@@ -75,7 +81,14 @@ export default function OverworldScreen() {
     const regionId = prog.currentRegionId || 'home';
     const region = getRegionMap(regionId) || getRegionMap('home')!;
     regionRef.current = region;
+    regionIdRef.current = regionId;
     setCurrentRegionId(regionId);
+    ambientRef.current.kind = getRegionAtmosphere(regionId).particle ?? null;
+    particlesRef.current.clear();
+    playRegionBGM(regionId);
+    // Kick off asset loads for this region — renderer tolerates them not being ready yet
+    getRegionBG(regionId);
+    for (const npcDef of region.npcs) preloadNPC(npcDef.id);
     stateRef.current = createOverworldState(region.playerSpawn.col, region.playerSpawn.row, region.npcs);
 
     // Show arrival story text for non-home regions (first visit)
@@ -147,7 +160,17 @@ export default function OverworldScreen() {
 
       const ctx = canvasRef.current!.getContext('2d')!;
       ctx.imageSmoothingEnabled = false;
-      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName);
+      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName, regionIdRef.current);
+
+      // Ambient particles on overlay canvas
+      if (effectsCanvasRef.current) {
+        const fxCtx = effectsCanvasRef.current.getContext('2d')!;
+        fxCtx.imageSmoothingEnabled = false;
+        tickAmbient(ambientRef.current, particlesRef.current, dt, CANVAS_WIDTH, CANVAS_HEIGHT);
+        particlesRef.current.update(dt, { w: CANVAS_WIDTH, h: CANVAS_HEIGHT });
+        fxCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        particlesRef.current.render(fxCtx);
+      }
 
       rafId = requestAnimationFrame(frame);
     };
@@ -501,24 +524,85 @@ export default function OverworldScreen() {
           >
             MENU
           </button>
+          <button
+            onClick={() => navigate('/settings')}
+            style={{
+              padding: '4px 8px', background: '#1a1a2e', color: '#ccc',
+              fontSize: 7, border: '1px solid #888',
+            }}
+          >
+            ⚙
+          </button>
         </div>
       </div>
 
-      {/* Canvas */}
-      <div style={{
-        flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center',
-        overflow: 'hidden',
-      }}>
-        <canvas
-          ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          style={{
-            width: '100%', height: '100%',
-            imageRendering: 'pixelated',
-            objectFit: 'contain',
-          }}
-        />
+      {/* Main play area — canvas + side/bottom UI tray. Canvas fills the space
+          while preserving 4:3; tray docks to the right on wide viewports, to
+          the bottom on mobile. */}
+      <div className="play-area">
+        {/* Canvas zone — canvas scales up to fill, preserving 4:3 aspect */}
+        <div className="canvas-zone">
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'contain',
+              imageRendering: 'pixelated',
+            }}
+          />
+          <canvas
+            ref={effectsCanvasRef}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            style={{
+              position: 'absolute', inset: 0,
+              width: '100%', height: '100%',
+              objectFit: 'contain',
+              imageRendering: 'pixelated',
+              pointerEvents: 'none',
+              zIndex: 40,
+            }}
+          />
+        </div>
+
+        {/* UI tray — side panel on desktop, bottom sheet on mobile */}
+        {(() => {
+          const region = REGIONS.find(r => r.id === currentRegionId);
+          return (
+            <div className="ui-tray">
+              <div style={{
+                padding: '14px 16px',
+                background: 'linear-gradient(180deg, #12121f 0%, #0d0d1a 100%)',
+                border: '1px solid #1a1a2e',
+                borderRadius: 8,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+              }}>
+                <div style={{
+                  fontSize: 'var(--fs-lg)', color: region?.color || '#ffd700',
+                  letterSpacing: 2, marginBottom: 8,
+                }}>
+                  {(region?.name || 'Home Gym').toUpperCase()}
+                </div>
+                <div style={{
+                  fontSize: 'var(--fs-xs)', color: '#888', lineHeight: 1.7,
+                }}>
+                  {region?.description || 'Where it all began.'}
+                </div>
+              </div>
+
+              <div style={{ flex: 1 }} />
+
+              <div style={{
+                fontSize: 'var(--fs-xs)', color: '#555', textAlign: 'center',
+                lineHeight: 1.8, letterSpacing: 1,
+              }}>
+                WALK TO AN NPC TO INTERACT<br />WALK TO THE DOOR TO LEAVE
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Arrival story overlay */}
@@ -574,15 +658,6 @@ export default function OverworldScreen() {
       {/* D-pad */}
       <DPad onDirection={handleDirection} onAction={() => handleAction()} />
 
-      {/* Hint text */}
-      {!dialogueNPC && (
-        <div style={{
-          position: 'absolute', bottom: 8, left: 0, right: 0,
-          textAlign: 'center', fontSize: 'var(--fs-xs)', color: '#444',
-        }}>
-          WALK TO AN NPC TO INTERACT • WALK TO THE DOOR TO LEAVE
-        </div>
-      )}
     </div>
   );
 }
