@@ -1,0 +1,220 @@
+# Grapple Quest — Full Design Review (June 11, 2026)
+
+Method: 6,720 simulated AI-vs-AI matches on the real BattleEngine (tools/sim-entry.ts),
+a second 6,720-match counterfactual with ideal 9-move sets, full-game screenshot tour
+(tools/tour.mjs), hands-on Playwright playthroughs, and a complete code read.
+
+---
+
+## The headline finding
+
+**The battle system starves its own best idea.** The shared-position graph is the
+game's soul, but in practice the mat barely gets used:
+
+| Metric (live 4-move AI) | Value |
+|---|---|
+| Turns where the actor has ZERO real legal moves | **53.5%** |
+| Turns spent on Spaz Out | **47.2%** |
+| Turns spent on Stall | 16.2% |
+| Real technique turns | **36.7%** |
+| Time spent in mount | **0.7%** |
+| Time in back control | 1.2% |
+| Time in side control | 1.0% |
+| Time standing | 41.4% |
+| Submission attempts per match | 0.69 |
+
+Even the counterfactual with hand-curated 9-move sets only improves this to 47.2%
+dead turns / 0.7% mount. **The position graph (12 positions × roles) is structurally
+wider than any move loadout can cover.** The result: matches are spaz-scramble loops
+that reset to standing, and the pass → control → finish arc that defines BJJ almost
+never happens.
+
+Compounding bugs/imbalances found:
+
+1. **Every AI opponent in the game has exactly 4 moves, forever.** `generateBracket`
+   and `generateRandomOpponent` do `arch.startingMoves.slice(0, 4 + beltIdx)` — but
+   every archetype's `startingMoves` has length 4, so the slice is a no-op. Black-belt
+   Worlds finalists fight with a white belt's toolkit.
+2. **Judo Heavy cannot play the game: 0.8% win rate.** Its throws need clinch, it has
+   no clinch entry, so it spazzes for ~22 turns and loses on stall-penalty advantages.
+3. **Missed submissions award the attacker an advantage** (`BattleEngine` awards
+   "near-submission" on a clean whiff). Submission spam farms free advantages —
+   sub-styles win 64-84% in sim, wrestlers 29-39%, and 12% of matches are decided
+   on these advantages.
+4. **Dominant positions are paper.** Passes face a guard-retention counter-roll, but
+   escapes face nothing — no top-control roll. Mount/back/side evaporate in 1-2 turns.
+5. **~77% of the move pool is unobtainable.** 151 moves exist; only ~25 unique
+   teachables across all instructors + ~13 starter moves are acquirable. The Move
+   Dex (X/151) can never be filled.
+6. The AI scoring formula (`power + accuracy×0.3`) starves power-0 transitions and
+   setups — the AI almost never advances position on purpose.
+
+---
+
+## Idea 1 — the keystone: "Everyone knows the fundamentals"
+
+Give every grappler a permanent, universal **fundamentals kit**: one weak-but-legal
+move for every position+role — Basic Pass, Basic Escape, Basic Sweep, Basic Advance,
+Basic Takedown, Grip Fight. Low power, modest accuracy, normal stamina. Equipped moves
+become your **specialization** — strictly better versions and signature attacks — not
+your only options.
+
+This one change fixes the entire cluster: zero-option turns disappear, dominant
+positions become reachable and worth taking, Judo Heavy can close distance, Spaz
+returns to being a desperation gamble instead of 47% of the game, and Jeff's parked
+"position-specific slots" idea becomes a natural layer on top (slots specialize
+per-position; fundamentals fill the gaps). It's also exactly true to the sport:
+every white belt knows *a* guard pass; your A-game is what you've drilled.
+
+Estimated effort: ~1 day (a FUNDAMENTALS move table + include them in
+`getLegalMoves`, AI scoring already handles the rest).
+
+## Combat system ideas (ordered)
+
+2. **Top-control roll vs escapes** — mirror of guard retention: escape attempts roll
+   against the top player's control (STR/TEC weighted). Outcomes: clean escape /
+   partial improvement / shut down (+advantage to top for the shutdown). Makes
+   mount/back sticky and earns the 4-point positions their value.
+3. **Fix advantage farming** — advantage only on phase-2+ submission attempts
+   (already exists); delete the on-miss advantage. Re-run the sim; expect sub-style
+   win rates to drop toward 55%.
+4. **Belt-scaled AI movesets** — fix the `4 + beltIdx` no-op by giving each archetype
+   a 13-move pool and slicing by belt. Pair with +15-25 AI score for transitions when
+   no submission is available, so AI actually hunts position. (The sim shows the
+   difference this makes.)
+5. **Positional pressure meter** — each consecutive turn holding a dominant top
+   position adds "pressure": +acc to your subs, extra stamina drain on the bottom
+   player. Visible as a small flame stack on the HUD. Rewards control players,
+   punishes stalling on bottom, creates drama ("survive the mount").
+6. **Interactive submission defense** — the 3-phase resolve currently plays out with
+   zero input. Add one beat: defender gets a timed tap ("DEFEND!") that adds a small
+   bonus to their roll; attacker can bail after phase 1 to save stamina. The single
+   most dramatic moment in BJJ deserves the player's thumbs.
+7. **Style passives** — one rule-bending passive per style (wrestler: takedown chains
+   cost -3 stamina; pressure-passer: bottom opponent recovery halved; berimbolo:
+   sweeps grant +2 momentum; controller: stall penalty immunity once per match...).
+   Differentiates styles beyond stats + type chart, enables team-comp thinking for
+   challenge links.
+8. **Judo quick-fix (do immediately)** — add `clinch-entry` to Judo Heavy's starting
+   four. One line. Takes them from 0.8% to playable.
+
+## Progression & content ideas
+
+9. **"Learn by getting caught"** — the BJJ-authentic acquisition mechanic: get tapped
+   by the same technique 2-3 times → "You've felt the lasso sweep from the inside.
+   Learn it?" Suddenly losses teach literally, random encounters matter, and all 151
+   moves become reachable. Supplement with tournament gold rewards (champion teaches
+   you a move) and per-region instructor rotations.
+10. **Position-specific slots** (Jeff's parked idea) — equip 2-3 moves per position
+    instead of 13 global. Pairs perfectly with the fundamentals kit; turns loadout
+    into the strategic meta-game and makes the 151-move pool matter.
+11. **Activate the specialization field** — `PlayerProgression.specialization` exists,
+    is referenced by the purple-belt story beat, and is never used. At purple belt let
+    the player declare a specialty (one style tree) for a permanent passive + access
+    to that style's exclusive techniques. The story already promises this.
+12. **Gym leader rematches** — Dizzy literally says "come back when you want the
+    advanced stuff" and nothing happens. Rematch tiers per belt with upgraded movesets
+    (once AI sets scale), rewarding revisits to old regions.
+13. **Consumables in battle** — items only fire pre-battle today. A between-turns
+    "corner" action (once per match, costs your turn — drink electrolytes, tape a
+    finger) adds a comeback decision without new systems.
+
+## Maps & world ideas
+
+14. **Break the room mold.** All 9 regions are the same 15×20 single room with a
+    centered mat and a south door — only the textures change. Cheap-to-real options,
+    in increasing effort: (a) vary mat shape/orientation + prop layouts per region so
+    silhouettes differ; (b) give 2-3 regions a signature layout — Coral Bay's mat on
+    an open beach deck (sand + ocean tiles around it), Steel Mountain an L-shaped
+    wrestling room with a weight corner, Summit City a stadium floor with crowd-stand
+    tiles on three sides; (c) one extra room per region (locker room / lounge) with
+    flavor NPCs and lore — doubles world size for one tile-paint each.
+15. **Summit City should feel like Worlds.** Crowd tiles, camera flashes (particle
+    burst), an announcer text ticker during the tournament, podium scene with the
+    actual bracket names. It's the endgame — it currently feels like gym #9.
+16. **Regenerate the home-gym mat surface.** The painted `scenes/home/mat-surface.png`
+    came out flat featureless green — and it's the screen every player stares at for
+    their entire first hour. Old Town's tatami and Nova's LED grid prove the pipeline
+    can do much better. One PixelLab gen (~1 credit): "worn green BJJ puzzle mats,
+    visible jigsaw seams, subtle scuffs and shading."
+17. **World map glow-up** — the subway-graph works functionally but is 80% black
+    void: add small pixel thumbnails per node (each region's mat as the icon), stamp
+    badges on conquered nodes, and an animated player marker walking the route on
+    travel.
+18. **Ambient life** — the wandering NPCs are good; add 2-3 background drilling pairs
+    per gym (two NPCs cycling a takedown animation on a loop). The infra (wander +
+    sprites) exists; it would make gyms feel alive instead of like waiting rooms.
+
+## Visual design ideas
+
+19. **Battle canvas text needs outlines.** Gold position text on Old Town's gold
+    tatami is invisible (screenshot-verified). Add 1px black outline / drop shadow to
+    all canvas text. Trivial, big readability win.
+20. **Mobile letterboxing.** On a phone the 4:3 canvas leaves ~40% of the screen as
+    dead black bands. Options: extend region tint/vignette into the bands, draw a
+    pixel-art crowd/wall border, or crop the camera to fill more vertically.
+21. **Key-moment splashes.** The log is the only storyteller; big events deserve
+    canvas-level banners — "TAKEDOWN +2", "GUARD PASSED!", "SUBMISSION ATTEMPT!" with
+    a half-second freeze-frame. The processBattleBeat hook already parses these
+    moments for SFX; render them too.
+22. **Replace emoji with pixel glyphs.** ⚔ 📸 🥇 🔥 render as fallback boxes/mismatched
+    color emoji inside the Press Start 2P UI (visible in screenshots). Tiny 8×8 pixel
+    icons would match the art direction.
+23. **Stat bars lie at high level.** Profile bars scale to /50 so a black belt shows
+    every bar maxed (175 STR == 60 FLX visually). Scale to the belt-tier max instead.
+    Also: the XP bar at MAX RANK renders empty — show it full gold.
+24. **Scout panel: show the moves.** After fighting someone once, the panel shows
+    only a move COUNT (the code even has a leftover unused `moveCounts` map). Listing
+    the known techniques turns scouting into real prep — especially for challenge
+    builds.
+
+## Audio ideas
+
+25. **Ship music.** The BGM system is fully built (per-region tracks, crossfade,
+    ducking, volume settings) and `public/audio/` doesn't exist — the game is
+    silent outside synth SFX. Nine 60-90s chiptune loops (Suno or any chiptune
+    generator) dropped at the existing paths = instant atmosphere for zero code.
+    Home = warm/lofi, Steel = aggressive, Coral = beach, Summit = orchestral-chip.
+26. **Crowd layer at tournaments** — low murmur loop + pop on points/taps. The
+    ducking infra already supports layering.
+
+## Retention / meta ideas
+
+27. **Daily Roll** — one daily seeded opponent (same build for every player that
+    day), streak counter, share card on streak milestones. Cheap (client-side seed
+    by date) and it's the habit loop the game lacks.
+28. **Gym Wars seasons** — the new gym leaderboard, reset monthly with a champion
+    banner in your home gym for last season's top academy. Gives the leaderboard a
+    pulse and gyms a reason to rally.
+29. **New Game+** — the post-credits scene (you greet a new white belt with your
+    coach's words) is a built-in NG+ hook: restart at white belt keeping one
+    signature move at full mastery. Speedrun-friendly, doubles content lifetime.
+
+---
+
+## What's already strong (don't touch)
+
+- The shared-position engine model — authentic, novel, the moat.
+- Region art direction (Old Town, Nova Camp, Steel Mountain are genuinely beautiful).
+- The Kenzo arc, named-coach personalization, scripted loss, full-circle ending.
+- Fatigue curve, stall/spaz concept (as flavor, not as half the game), move mastery.
+- The new v1.4.0 layer: share cards, challenge links, gym leaderboard, analytics.
+
+## Suggested build order (impact × effort)
+
+| # | Item | Effort | Why first |
+|---|------|--------|----------|
+| 1 | Fundamentals kit (#1) | ~1 day | Fixes 53% dead turns, the core experience |
+| 2 | Judo clinch-entry + belt-scaled AI sets (#8, #4) | hours | Unbreaks 1/8 archetypes, real difficulty curve |
+| 3 | Advantage-farming fix (#3) | minutes | Rebalances 8 styles |
+| 4 | Top-control roll (#2) | ~½ day | Makes positions matter |
+| 5 | Canvas text outlines + home mat regen (#19, #16) | hours | First-hour visual quality |
+| 6 | Ship BGM (#25) | hours | Biggest atmosphere-per-effort in the game |
+| 7 | Learn-by-getting-caught (#9) | ~1 day | Unlocks 77% of dormant content |
+| 8 | Positional pressure (#5) | ~½ day | Drama + control rewarded |
+| 9 | Key-moment splashes (#21) | ~½ day | Battle readability |
+| 10 | Daily Roll (#27) | ~1 day | Retention loop |
+
+Re-run `tools/sim-entry.ts` after each combat change — targets: dead turns <10%,
+spaz <10%, mount+side+back combined >15%, every archetype 40-60% win rate,
+submissions ~35-45% of finishes.
