@@ -218,3 +218,92 @@ Estimated effort: ~1 day (a FUNDAMENTALS move table + include them in
 Re-run `tools/sim-entry.ts` after each combat change — targets: dead turns <10%,
 spaz <10%, mount+side+back combined >15%, every archetype 40-60% win rate,
 submissions ~35-45% of finishes.
+
+---
+
+# Part 2 — Stickiness: engineering the comeback (game-director addendum)
+
+The honest audit: Grapple Quest has **long-arc hooks** (belts, stamps, story) and now
+**social hooks** (share cards, challenges, gym board) — but **zero return triggers**.
+When you close the tab, nothing is pending, nothing regenerates, nothing happens
+tomorrow. Retention isn't a feature you add; it's a schedule of moments. Here's the
+hook map by time-scale, and what's missing at each.
+
+## Hook timing map
+
+| Moment | What exists | What's missing |
+|---|---|---|
+| Min 1-5 | Name your gym/coach (identity) ✓ | — |
+| Min 5-10 | First win + Kenzo drama ✓ | — |
+| **End of session 1** | nothing | **A "tomorrow" promise** |
+| **Day 1 return** | nothing | **A reason that expires** |
+| Week 1 | First promotion (shareable ✓) | — |
+| Weeks 2-4 | Belt grind vs identical 4-move AIs | **Variable rewards, texture** |
+| Month 1+ | Win Worlds → credits → done | **Endgame loop** |
+
+## The retention stack (ranked)
+
+1. **Rested XP — "Fresh Legs"** (hours of work, zero risk). First 3 wins each
+   calendar day give 2× XP + bonus Mat Bucks. Never blocks play — it front-loads
+   reward into the return moment instead of punishing absence. Perfect BJJ fiction
+   (you train better recovered). This single mechanic is the cheapest D1 lever in
+   the game.
+2. **The Daily Roll** (~1 day). One seeded opponent per day — every player worldwide
+   fights the same build. Streak counter, streak share-cards at 7/30/100, an
+   exclusive gi color at 30. Wordle mechanics inside a BJJ game; gym group chats
+   will compare ("you tap the Tuesday guy?"). Client-side date seed — no backend.
+3. **The coach's promise** (hours). At session end (first navigation to title /
+   N minutes idle), your coach says: "Come back tomorrow — I want to show you
+   something." Next day: a free move-XP boost, a technique tip, or a daily-roll
+   intro. The promise is the trigger; the gift is the variable reward. Also: coach
+   comments on your recent results ("Caught in a heel hook again? Let's fix that.")
+   — templated off battle history, makes the world remember you.
+4. **Your gym wall** (~1 day). Render trophies, medals, stamps, and the belt rack
+   INSIDE the home-gym overworld. Every session starts by walking past your own
+   history. Investment that isn't displayed doesn't retain; this is the Animal
+   Crossing museum effect. (Tournament golds = wall banners; Worlds = the big one.)
+5. **Open Mat Wednesdays** (~1 day). One real-world day a week, every gym hosts
+   open mat: rare named wanderers appear (visiting black belts, old legends) with
+   unique movesets — beat them to learn THEIR signature move. Appointment mechanic
+   + variable reward + feeds the move-acquisition gap, all at once.
+6. **Rare encounters** (hours). 5% of random encounters are special: a sandbagging
+   "white belt" who's clearly a purple, a visiting pro. Higher risk, rare drops
+   (technique scrolls, cosmetics). Turns the 8% encounter roll into a slot machine
+   worth pulling.
+7. **Learn-by-getting-caught** (Part 1, idea #9 — restated here because it's ALSO
+   a retention mechanic): losses become lottery tickets. The worst moment in the
+   session (losing) becomes a reward moment. That's churn-proofing the exact moment
+   players quit.
+8. **Gym Wars seasons** (~1 day on top of existing board). Monthly reset; last
+   season's top gym gets a banner rendered in every member's home gym. Pride loop
+   for whole academies — and the reset itself is a comeback trigger ("new season
+   started").
+9. **Challenge ladder** (later). Accepted challenges award ladder points; weekly
+   top-10. Gives the challenge links a persistent scoreboard instead of one-shots.
+10. **NG+ — the full circle run** (later). The post-credits scene already writes it:
+    you greet a new white belt with your coach's words. Let players BE that restart —
+    white belt again, carrying one mastered signature move. Speedrunners and
+    completionists get a second lifetime of content for ~2 days of work.
+
+## The notification surface
+
+It's a PWA now. Don't start with push (permission-prompt churn) — start with
+**state that begs checking**: the title screen badges "🥋 Coach has something for
+you" / "Daily Roll: 6-day streak — don't break it." If D7 numbers justify it later,
+add opt-in web push pitched at the right moment (after a streak hits 3, never at
+first launch).
+
+## Measure it
+
+Every hook above ships with its analytics event (the d0/d1/d7/d30 return buckets
+are already live in /api/stats). Success criteria: D1 > 25%, D7 > 10% during the
+Academia pilot. If a hook doesn't move its bucket in two weeks, kill it — the
+events make retention a dashboard, not a debate.
+
+## Director's call — combined build order (Parts 1+2)
+
+Week 1: fundamentals kit, judo/AI/advantage fixes, rested XP, coach's promise,
+text outlines, home-mat regen, BGM.
+Week 2: Daily Roll, gym wall, learn-by-getting-caught, key-moment splashes.
+Week 3: open mat days, rare encounters, top-control roll, pressure meter.
+Then: pilot at Academia, watch the buckets, season the leaderboard, NG+.
