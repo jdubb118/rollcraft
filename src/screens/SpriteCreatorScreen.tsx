@@ -33,6 +33,32 @@ export default function SpriteCreatorScreen() {
     track('sprite-gen');
   }
 
+  // Center-crop + resize any upload to a 256×256 PNG — the API requires a
+  // known input size, and this kills multi-MB uploads + EXIF surprises.
+  async function photoTo256(file: File): Promise<string> {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = url;
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d')!;
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      // bias crop toward the top — faces live there in portraits
+      const sy = Math.max(0, (img.height - side) / 4);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, 256, 256);
+      return canvas.toDataURL('image/png').split(',')[1];
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   async function handlePhotoUpload(file: File) {
     if (getGensUsed() >= DEVICE_GEN_CAP) {
       setError(`You've used all ${DEVICE_GEN_CAP} sprite generations on this device.`);
@@ -43,15 +69,7 @@ export default function SpriteCreatorScreen() {
     setError('');
 
     try {
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]); // strip data:image/...;base64, prefix
-        };
-        reader.readAsDataURL(file);
-      });
+      const base64 = await photoTo256(file);
 
       // Show uploaded photo as preview
       setPreview(`data:image/png;base64,${base64}`);

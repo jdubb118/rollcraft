@@ -74,14 +74,30 @@ export default async function handler(req: Request): Promise<Response> {
     let result;
 
     if (body.photo) {
-      // Photo-to-pixel-art conversion
-      result = await fetch('https://api.pixellab.ai/v2/create-image-pixflux', {
+      // Photo → pixel art. PixelLab dropped `reference_images` (schema drift,
+      // June 2026); the working path is /image-to-pixelart (preserves the
+      // person's look — hair, skin, clothes) chained with /remove-background
+      // for a game-ready transparent sprite. Client sends a 256×256 PNG.
+      const i2p = await fetch('https://api.pixellab.ai/v2/image-to-pixelart', {
         method: 'POST', headers,
         body: JSON.stringify({
-          description: body.description || 'BJJ fighter in gi, front facing, full body, pixel art game character sprite',
+          image: { type: 'base64', base64: body.photo, format: 'png' },
+          image_size: { width: 256, height: 256 },
+          output_size: { width: size, height: size },
+        }),
+      });
+      const i2pData = await i2p.json();
+      const pixelart = i2pData.image?.base64;
+      if (!pixelart) {
+        return new Response(JSON.stringify({ error: 'Generation failed', detail: i2pData }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      result = await fetch('https://api.pixellab.ai/v2/remove-background', {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          image: { type: 'base64', base64: pixelart, format: 'png' },
           image_size: { width: size, height: size },
-          no_background: true,
-          reference_images: [{ image: { type: 'base64', base64: body.photo, format: 'png' } }],
         }),
       });
     } else {
