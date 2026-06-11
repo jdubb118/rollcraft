@@ -45,6 +45,9 @@ if (status === 'INACTIVE') {
   console.log('restoring project...');
   const r = await fetch(`${API}/projects/${REF}/restore`, { method: 'POST', headers, body: '{}' });
   console.log('restore request:', r.status);
+}
+if (status !== 'ACTIVE_HEALTHY') {
+  // INACTIVE (just kicked), COMING_UP, RESTORING — poll until healthy
   for (let i = 0; i < 60; i++) {
     await new Promise(res => setTimeout(res, 10000));
     status = await getStatus();
@@ -96,6 +99,20 @@ drop policy if exists "members public read" on gym_members;
 create policy "members public read" on gym_members for select using (true);
 -- No insert/update/delete policies: all writes go through Netlify functions
 -- using the service role key, which bypasses RLS.
+
+create table if not exists saves (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  player jsonb,
+  opponent jsonb,
+  progression jsonb,
+  custom_sprite_url text,
+  photo_hash text,
+  device_updated_at timestamptz
+);
+alter table saves enable row level security;
+drop policy if exists "saves owner all" on saves;
+create policy "saves owner all" on saves for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
 `;
 
 console.log('creating schema...');
