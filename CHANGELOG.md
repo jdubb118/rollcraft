@@ -1,5 +1,59 @@
 # Grapple Quest Changelog
 
+## v1.5.0 — The Combat & Comeback Update (June 11, 2026)
+
+### The Fundamentals Kit — combat reborn
+- Every grappler now knows the basics: a weak-but-legal fundamental move for every
+  position (Basic Takedown, Basic Pass, Basic Sweep, Basic Mount, Basic Escape...).
+  Your equipped moves are your SPECIALIZATION — fundamentals mean no position is
+  ever a dead end. Sim-verified: dead turns 53.5% → ~18%, Spaz Out 47% → 11% of
+  turns, real technique usage 37% → 70%.
+- Spaz Out returns to being a desperation gamble, not half the game.
+
+### Smarter, scarier opponents
+- AI opponents now have belt-scaled movesets (white 4 → black 12 moves) drawn from
+  per-archetype pools. Worlds finalists finally fight like Worlds finalists.
+- Judo Heavy can actually play (clinch entry + standing Osoto Gari) — was 0.8%
+  sim win rate, now ~38%.
+- AI values position advancement, not just damage.
+
+### Balance overhaul (6,720-match sim verified per change)
+- Sweeps now roll against the top player's BASE (mirror of guard retention).
+- Sweeps score 2 (sweep) — no more 4-point mount-sweep treadmill.
+- Pulling guard is no longer free (88 acc / 8 stamina, was 100/5).
+- Whiffed submissions no longer farm advantages.
+- Submission defense: TGH weighted up, repeated sub attempts get read (+6 defense
+  per repeat), defender stamina bleed on failed subs reduced.
+- Escapes from mount/side/back roll against the top player's control.
+- Frame mods softened — light frames no longer strictly better.
+- POSITIONAL PRESSURE: hold a dominant position and it mounts — your submissions
+  sharpen, the bottom player bleeds stamina. Visible pressure pips on the HUD.
+
+### The daily layer — reasons to come back
+- FRESH LEGS: first 3 wins each day earn 2× XP. Never blocks play.
+- DAILY ROLL: one seeded challenger per day — the same build for every player on
+  Earth. One attempt. Win streaks, streak bonuses, bragging rights.
+- THE COACH'S GIFT: once a day, your coach has something for you.
+- LEARN BY GETTING CAUGHT: tapped by the same technique twice → you've felt it
+  from the inside. Learn it, free. Losses literally teach.
+
+### Sound
+- 9 region BGM loops (generative chiptune — square lead, triangle bass, per-region
+  key/tempo/mood). The game is no longer silent. Volume in settings.
+
+### Your gym remembers
+- Tournament golds hang as pennants on your home gym wall; region stamps display
+  as shields. Your career, rendered where you train.
+
+### Quality of life
+- Canvas text outlined — readable on every mat (was invisible on gold tatami).
+- Key-moment splashes: TAKEDOWN! / SWEEP! / GUARD PASSED! / TAP!! land on the
+  canvas, not just the log.
+- Scout panel lists the opponent's actual known techniques after first fight.
+- Profile stat bars scale relative to your best stat (were all maxed at /50).
+- Home gym mat surface regenerated (was a flat green rectangle).
+- MAX RANK XP bar renders full.
+
 ## v1.4.0 — Launch Readiness: Share, Compete, Measure (June 10, 2026)
 
 ### Share Cards

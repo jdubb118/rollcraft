@@ -140,7 +140,7 @@ export default function StatsScreen() {
               </div>
               <div style={{ width: '100%', height: 10, background: '#222', border: '1px solid #333' }}>
                 <div style={{
-                  width: `${Math.min(100, xpProgress)}%`, height: '100%',
+                  width: `${nextBelt ? Math.min(100, xpProgress) : 100}%`, height: '100%',
                   background: nextBelt ? BELT_COLORS[nextBelt] : '#ffd700',
                   transition: 'width 0.5s',
                 }} />
@@ -154,10 +154,13 @@ export default function StatsScreen() {
               )}
             </div>
 
-            {/* Stats */}
+            {/* Stats — bars scale relative to your best stat so they stay
+                meaningful at every level (fixed /50 maxed everything out) */}
             <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
               <div style={{ fontSize: 'var(--fs-sm)', color: '#ffd700', marginBottom: 8 }}>STATS</div>
-              {([
+              {(() => {
+                const statMax = Math.max(stats.str, stats.tec, stats.tgh, stats.flx, stats.spd, stats.end, 40);
+                return ([
                 ['STR', stats.str, '#e74c3c'],
                 ['TEC', stats.tec, '#3498db'],
                 ['TGH', stats.tgh, '#8b4513'],
@@ -171,7 +174,7 @@ export default function StatsScreen() {
                   <span style={{ fontSize: 'var(--fs-xs)', color: '#888', width: 28 }}>{label}</span>
                   <div style={{ flex: 1, height: 8, background: '#222' }}>
                     <div style={{
-                      width: `${Math.min(100, (value / 50) * 100)}%`,
+                      width: `${Math.min(100, (value / statMax) * 100)}%`,
                       height: '100%', background: color,
                     }} />
                   </div>
@@ -179,7 +182,8 @@ export default function StatsScreen() {
                     {value}
                   </span>
                 </div>
-              ))}
+              ));
+              })()}
               <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 4 }}>
                 HP: {stats.maxHp}
               </div>

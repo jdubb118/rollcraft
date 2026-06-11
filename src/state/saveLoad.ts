@@ -174,6 +174,29 @@ export function getInventory(): Record<string, number> {
   return loadProgression().inventory || {};
 }
 
+// ── Caught-by tracking ("learn by getting caught") ──
+const CAUGHT_KEY = 'rollcraft-caught-by';
+
+export function recordCaughtBy(moveId: string): number {
+  let counts: Record<string, number> = {};
+  try { counts = JSON.parse(localStorage.getItem(CAUGHT_KEY) || '{}'); } catch { /* fresh */ }
+  counts[moveId] = (counts[moveId] || 0) + 1;
+  localStorage.setItem(CAUGHT_KEY, JSON.stringify(counts));
+  return counts[moveId];
+}
+
+export function getCaughtCount(moveId: string): number {
+  try { return (JSON.parse(localStorage.getItem(CAUGHT_KEY) || '{}'))[moveId] || 0; } catch { return 0; }
+}
+
+export function clearCaughtCount(moveId: string): void {
+  try {
+    const counts = JSON.parse(localStorage.getItem(CAUGHT_KEY) || '{}');
+    delete counts[moveId];
+    localStorage.setItem(CAUGHT_KEY, JSON.stringify(counts));
+  } catch { /* ignore */ }
+}
+
 // ── Utilities ──
 export function hasExistingPlayer(): boolean {
   return localStorage.getItem(PLAYER_KEY) !== null;

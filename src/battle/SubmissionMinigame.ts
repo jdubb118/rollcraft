@@ -38,7 +38,15 @@ export function resolveSubmissionPhase(
   isChained: boolean,
 ): SubmissionResult {
   let attackRoll = Math.floor(attacker.stats.tec * 0.6 + attacker.stats.str * 0.4) + randInt(0, 20);
-  const defendRoll = Math.floor(defender.stats.flx * 0.5 + defender.stats.tgh * 0.3 + defender.stats.end * 0.2) + randInt(0, 20);
+  // Defense weights TGH harder than it used to — being hard to finish is the
+  // grinder's whole identity, and pure-FLX builds were near-unsubbable while
+  // heavies got tapped on demand.
+  let defendRoll = Math.floor(defender.stats.flx * 0.45 + defender.stats.tgh * 0.35 + defender.stats.end * 0.20) + randInt(0, 20);
+
+  // Repeat-read applies INSIDE the lock too: spamming the same submission
+  // teaches the defender the grips. (Accuracy decay alone didn't gate this —
+  // the minigame was the real win engine.)
+  defendRoll += attacker.repeatCount * 6;
 
   // Position bonus — works for BOTH top and bottom submissions
   // Dominant top (mount/back) = big bonus for top attacker
@@ -48,7 +56,7 @@ export function resolveSubmissionPhase(
   if (posData.advantage === 'dominant-top') posBonus = 15;
   else if (posData.advantage === 'top') posBonus = 10;
   else if (posData.advantage === 'slight-top') posBonus = 5;
-  else if (posData.advantage === 'slight-bottom') posBonus = 8; // closed guard = strong sub position
+  else if (posData.advantage === 'slight-bottom') posBonus = 5; // closed guard = real sub position, was over-tuned at 8
   else if (posData.advantage === 'neutral') posBonus = 3; // leg entanglement, clinch
   attackRoll += posBonus;
 
@@ -60,8 +68,10 @@ export function resolveSubmissionPhase(
   const gassedNote = defender.isGassed ? ' (opponent gassed!)' : '';
 
   const threshold = attackRoll - defendRoll;
-  const attackerStaminaCost = 8;
-  const defenderStaminaCost = 12;
+  // Attacker invests more than the defender bleeds — surviving a bad
+  // submission attempt shouldn't cost more than throwing it.
+  const attackerStaminaCost = 10;
+  const defenderStaminaCost = 8;
 
   // Build the visual feedback
   const bar = tensionBar(threshold);
@@ -79,7 +89,7 @@ export function resolveSubmissionPhase(
       attackerStaminaCost, defenderStaminaCost,
       message: `${phaseHeader}\n${bar} ${label}\n${move.name} locked in tight! TAP!`,
     };
-  } else if (threshold >= 16) {
+  } else if (threshold >= 18) {
     if (phase >= 3) {
       return {
         escaped: false, tapped: true, advancePhase: false,

@@ -1,6 +1,12 @@
 import type { BattleState, BattleGrappler, Move, Grappler, Belt, Position } from '../engine/types';
 import { POSITIONS, getRole, getCategories, getPositionDisplayName } from '../data/positions';
-import { getMove } from '../data/moves';
+import { getMove as getRealMove } from '../data/moves';
+import { getFundamental, getLegalFundamentals } from '../data/fundamentals';
+
+// Resolve a move id from the real pool OR the fundamentals kit.
+function getMove(id: string): Move | undefined {
+  return getRealMove(id) ?? getFundamental(id);
+}
 import { calculateDamage, getEffectivenessText } from './DamageCalc';
 import { deductStamina, recoverStamina, getFatiguePhase, getFatigueModifiers } from './StaminaSystem';
 import { resolveSubmissionPhase } from './SubmissionMinigame';
@@ -62,6 +68,8 @@ export function createBattleState(playerGrappler: Grappler, opponentGrappler: Gr
     ruleSet: 'points',
     lastPositionChange: null,
     moveUsage: {},
+    control: { by: null, turns: 0 },
+    finishingMoveId: null,
   };
   state.firstActor = computeFirstActor(state);
   return state;
@@ -91,6 +99,17 @@ function awardPositionPoints(state: BattleState, move: Move, attackerIs: 'player
   const newPos = move.resultPosition;
   let pts = 0, reason = '';
 
+  // A sweep scores as a sweep (2) no matter where it lands — sweeping straight
+  // into mount was worth 4 on an 85%+ accuracy repeatable move, which made the
+  // bottom game a points treadmill. The mount you land in is still yours; its
+  // value now comes from holding it (pressure) and finishing from it.
+  if (move.category === 'sweep') {
+    if (attackerIs === 'player') state.playerPoints += POINTS.sweep;
+    else state.opponentPoints += POINTS.sweep;
+    state.log.push(`⚡ SWEEP! +${POINTS.sweep} points (You: ${state.playerPoints} - Opp: ${state.opponentPoints})`);
+    return;
+  }
+
   // Check events from highest value to lowest — only one fires
   if (newPos === 'mount' && move.resultRole === 'top') {
     pts = POINTS.mount; reason = 'MOUNT';
@@ -103,8 +122,6 @@ function awardPositionPoints(state: BattleState, move: Move, attackerIs: 'player
     pts = POINTS.kneeOnBelly; reason = 'KNEE ON BELLY';
   } else if ((oldPosition === 'standing' || oldPosition === 'clinch') && move.category === 'takedown' && move.resultRole === 'top') {
     pts = POINTS.takedown; reason = 'TAKEDOWN';
-  } else if (move.category === 'sweep') {
-    pts = POINTS.sweep; reason = 'SWEEP';
   }
 
   if (pts > 0) {
@@ -132,6 +149,18 @@ function rollGuardRetention(
   return 'clean-pass';
 }
 
+// ── Base roll (top fighter tries to base out vs a sweep) ──
+// The mirror of guard retention: passes roll against the guard, sweeps roll
+// against the top player's base. Without this, bottom games were strictly
+// better (sweeps faced no counter while passes did).
+function rollSweepBase(
+  attacker: BattleGrappler, defender: BattleGrappler, move: Move,
+): 'swept' | 'based-out' {
+  const base = Math.floor(defender.stats.tgh * 0.4 + defender.stats.str * 0.35) + randInt(0, 15);
+  const sweepForce = Math.floor(move.power * 0.6 + attacker.stats.tec * 0.4) + randInt(0, 15);
+  return sweepForce >= base - 8 ? 'swept' : 'based-out';
+}
+
 // ── Get legal moves ──
 export function getLegalMoves(state: BattleState, who: 'player' | 'opponent'): Move[] {
   const fighter = who === 'player' ? state.player : state.opponent;
@@ -142,7 +171,7 @@ export function getLegalMoves(state: BattleState, who: 'player' | 'opponent'): M
     .map(id => getMove(id))
     .filter((m): m is Move => m !== undefined);
 
-  const legal = allMoves.filter(m => {
+  const equipped = allMoves.filter(m => {
     const posMatch = m.posReq.some(req =>
       req.position === state.position && (req.role === role || (req.role === 'neutral' && role === 'neutral'))
     );
@@ -150,11 +179,18 @@ export function getLegalMoves(state: BattleState, who: 'player' | 'opponent'): M
     return allowedCategories.includes(m.category);
   });
 
+  // Fundamentals: everyone always knows the basics for the current position.
+  // Equipped moves are your specialization — fundamentals fill the gaps so no
+  // position is ever a dead end.
+  const fundamentals = getLegalFundamentals(state.position, role)
+    .filter(m => allowedCategories.includes(m.category));
+  const legal = [...equipped, ...fundamentals];
+
   const affordable = legal.filter(m => fighter.currentStamina >= m.staminaCost);
   if (affordable.length === 0) return [SPAZ_MOVE, STALL_MOVE];
 
-  // If the only real moves available are few, always offer SPAZ as a scramble option
-  if (legal.length <= 1) return [...legal, SPAZ_MOVE, STALL_MOVE];
+  // SPAZ remains as a pure desperation gamble when options are thin
+  if (affordable.length <= 1) return [...legal, SPAZ_MOVE, STALL_MOVE];
   return [...legal, STALL_MOVE];
 }
 
@@ -333,15 +369,39 @@ function executeMove(
   if (attacker.momentum >= 1) accuracy += attacker.momentum * 5;
   if (attacker.setupBonus) accuracy += attacker.setupBonus.accuracyMod;
 
-  // Track move usage for XP (player only)
-  if (attackerIs === 'player' && move.id !== '__stall__' && move.id !== '__spaz__') {
+  // ── TOP CONTROL vs ESCAPES ──
+  // Escaping a top-advantage position rolls against the top player's control —
+  // the mirror of guard retention for passes. Good top control makes mount/back
+  // sticky; weak control lets athletic bottom players slip out.
+  const posDataNow = POSITIONS[state.position];
+  if (move.category === 'escape' && attackerRole === 'bottom'
+      && (posDataNow.advantage === 'top' || posDataNow.advantage === 'dominant-top')) {
+    const controlScore = defender.stats.str * 0.35 + defender.stats.tec * 0.40;
+    const escapeScore = attacker.stats.flx * 0.45 + attacker.stats.spd * 0.25;
+    const controlMod = Math.max(-22, Math.min(10, Math.round((escapeScore - controlScore) / 4)));
+    accuracy += controlMod;
+    if (state.control.by && state.control.by !== attackerIs) {
+      accuracy -= Math.min(9, state.control.turns * 3); // pressure makes escapes harder
+    }
+  }
+
+  // ── POSITIONAL PRESSURE (submissions from a held dominant position) ──
+  if (move.category === 'submission' && attackerRole === 'top'
+      && state.control.by === attackerIs && state.control.turns >= 1) {
+    accuracy += Math.min(9, state.control.turns * 3);
+  }
+
+  // Track move usage for XP (player only; fundamentals don't earn mastery —
+  // they're the floor, your specialization is what grows)
+  if (attackerIs === 'player' && move.id !== '__stall__' && move.id !== '__spaz__' && !move.id.startsWith('fund-')) {
     if (!state.moveUsage[move.id]) state.moveUsage[move.id] = { uses: 0, hits: 0 };
     state.moveUsage[move.id].uses++;
   }
 
   if (Math.random() * 100 > accuracy) {
     state.log.push(`${move.name} missed!`);
-    if (move.category === 'submission') awardAdvantage(state, attackerIs, `near-submission (${move.name})`);
+    // (No advantage for whiffed submissions — advantages are earned by
+    // genuinely threatening attempts, i.e. reaching phase 2 of the resolve.)
     attacker.lastMoveId = move.id;
     // Miss resets momentum
     if (attacker.momentum > 0) { attacker.momentum = 0; state.log.push(`Momentum reset!`); }
@@ -367,6 +427,7 @@ function executeMove(
       if (result.tapped) {
         state.winner = attackerIs;
         state.winMethod = 'submission';
+        state.finishingMoveId = move.id;
         state.phase = 'battle-over';
         state.log.push(`${defenderName} taps out! SUBMISSION!`);
         attacker.lastMoveId = move.id;
@@ -380,6 +441,18 @@ function executeMove(
     attacker.momentum = Math.min(3, attacker.momentum + 1);
     if (attacker.momentum > 0) state.log.push(`Momentum: ${attacker.momentum}`);
     return;
+  }
+
+  // ── BASE CHECK (for sweeps) ──
+  if (move.category === 'sweep') {
+    const baseResult = rollSweepBase(attacker, defender, move);
+    if (baseResult === 'based-out') {
+      state.log.push(`${defenderName} bases out! Sweep defended!`);
+      attacker.lastMoveId = move.id;
+      if (attacker.momentum > 0) { attacker.momentum = 0; state.log.push(`Momentum reset!`); }
+      return;
+    }
+    // swept: fall through to normal resolution
   }
 
   // ── GUARD RETENTION CHECK (for pass moves) ──
@@ -488,6 +561,14 @@ function pickAIMove(state: BattleState): Move {
     if (move.category === 'escape' && role === 'bottom') {
       score += posData.advantage === 'dominant-top' ? 50 : posData.advantage === 'top' ? 35 : 15;
     }
+    // Positional ambition: power-0 transitions/passes that ADVANCE position are
+    // the heart of BJJ — score them by where they lead, not their damage.
+    if (move.resultPosition && move.resultRole === 'top') {
+      const destAdvantage = POSITIONS[move.resultPosition].advantage;
+      if (destAdvantage === 'dominant-top') score += 45;
+      else if (destAdvantage === 'top') score += 30;
+      else if (destAdvantage === 'slight-top') score += 12;
+    }
     if (move.category === 'setup') score += 25; // AI values setup moves
     if (!isAhead && turnsLeft <= 4 && (move.category === 'takedown' || move.category === 'sweep' || move.category === 'pass')) score += 25;
     if (isChained(state.opponent.lastMoveId, move)) score += 20;
@@ -555,6 +636,26 @@ function finishTurn(state: BattleState): BattleState {
   if (state.phase !== 'battle-over') {
     const playerRole = getRole(state.position, state.topFighter, 'player');
     const opponentRole = getRole(state.position, state.topFighter, 'opponent');
+
+    // ── POSITIONAL PRESSURE TRACKING ──
+    // Hold a top-advantage position across turns and the pressure mounts:
+    // your submissions sharpen, the bottom player bleeds extra stamina.
+    const posData = POSITIONS[state.position];
+    const isTopAdvantage = posData.advantage === 'top' || posData.advantage === 'dominant-top';
+    if (isTopAdvantage && state.topFighter) {
+      if (state.control.by === state.topFighter) {
+        state.control.turns = Math.min(4, state.control.turns + 1);
+        const bottom = state.topFighter === 'player' ? state.opponent : state.player;
+        const drain = Math.min(6, state.control.turns * 2);
+        deductStamina(bottom, drain);
+        if (state.control.turns === 2) state.log.push(`⏳ ${state.topFighter === 'player' ? state.player.grappler.name : state.opponent.grappler.name} is settling in — the pressure is mounting.`);
+        if (state.control.turns >= 3) state.log.push(`🔥 Crushing pressure! ${bottom.grappler.name} is wilting (-${drain} stamina).`);
+      } else {
+        state.control = { by: state.topFighter, turns: 0 };
+      }
+    } else {
+      state.control = { by: null, turns: 0 };
+    }
 
     // Fatigue-adjusted recovery
     const fatigue = getFatiguePhase(state.turn, state.player.stats.end);

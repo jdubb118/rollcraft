@@ -1,6 +1,7 @@
 import type { BattleGrappler, StatKey } from '../engine/types';
 import { STYLE_NAMES, STYLE_COLORS } from '../engine/constants';
 import { getLevel } from '../battle/stats';
+import { getMove } from '../data/moves';
 
 interface ScoutPanelProps {
   opponent: BattleGrappler;
@@ -63,12 +64,7 @@ export default function ScoutPanel({ opponent, player, isKnown, onClose }: Scout
     return noise;
   };
 
-  // Count move categories
-  const moveCounts: Record<string, number> = {};
-  for (const moveId of opp.moves) {
-    // We don't import getMove to keep this light — just show count
-    moveCounts[moveId] = 1;
-  }
+  const knownMoves = opp.moves.map(id => getMove(id)).filter((m): m is NonNullable<typeof m> => !!m);
 
   const stats: StatKey[] = ['str', 'tec', 'tgh', 'flx', 'spd', 'end'];
 
@@ -127,10 +123,21 @@ export default function ScoutPanel({ opponent, player, isKnown, onClose }: Scout
         </div>
       </div>
 
-      {/* Move count */}
+      {/* Known techniques — real prep, not just a count */}
       <div style={{ background: '#111', padding: '10px 12px', border: '1px solid #222' }}>
-        <div style={{ fontSize: 'var(--fs-xs)', color: '#888', marginBottom: 4, textAlign: 'center' }}>
-          KNOWN TECHNIQUES: {opp.moves.length}
+        <div style={{ fontSize: 'var(--fs-xs)', color: '#888', marginBottom: 6, textAlign: 'center' }}>
+          KNOWN TECHNIQUES ({knownMoves.length})
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
+          {knownMoves.map(m => (
+            <span key={m.id} style={{
+              fontSize: 7, color: STYLE_COLORS[m.style],
+              border: `1px solid ${STYLE_COLORS[m.style]}55`,
+              padding: '2px 5px', background: '#0a0a14',
+            }}>
+              {m.name.toUpperCase()}
+            </span>
+          ))}
         </div>
       </div>
 

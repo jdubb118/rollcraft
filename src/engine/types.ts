@@ -167,6 +167,11 @@ export interface BattleState {
   // Position hold tracking (need 3s / ~1 turn to score)
   lastPositionChange: { position: Position; who: 'player' | 'opponent'; turn: number } | null;
   moveUsage: Record<string, { uses: number; hits: number }>; // track move usage for XP
+  // Positional pressure — consecutive turns the same fighter has held a
+  // top-advantage position. Boosts top's submissions, drains bottom's stamina.
+  control: { by: 'player' | 'opponent' | null; turns: number };
+  // Set when the match ends by submission — which move finished it
+  finishingMoveId: string | null;
 }
 
 // ── Archetype (starter template) ──
@@ -182,9 +187,12 @@ export interface Archetype {
 
 // ── Battle result ──
 export interface BattleResult {
+  ts: number; // unique per battle — lets the result screen run side-effects exactly once
   winner: 'player' | 'opponent' | 'draw';
   method: 'submission' | 'points' | 'advantages' | 'draw';
   xpGained: number;
+  freshLegs?: boolean;          // this win earned the Fresh Legs 2× bonus
+  finishingMoveId?: string | null; // the submission that ended it (null otherwise)
   turns: number;
   playerName: string;
   opponentName: string;

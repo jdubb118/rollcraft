@@ -16,7 +16,7 @@ const ALLOWED_PREFIXES = [
   'battle-result', 'tutorial-seen',
   'promotion', 'share-clicked', 'sprite-gen',
   'challenge-created', 'challenge-accepted',
-  'gym-win',
+  'gym-win', 'daily-roll', 'caught-learn',
 ];
 
 function sanitizeGym(raw: unknown): string | null {

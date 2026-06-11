@@ -3,7 +3,7 @@
  * Like wild Pokemon encounters but BJJ-themed.
  */
 import type { Grappler, Belt, Style, Frame } from '../engine/types';
-import { ARCHETYPES } from './archetypes';
+import { ARCHETYPES, getArchetypeMoves } from './archetypes';
 import { rollIVs } from '../engine/random';
 
 const ENCOUNTER_NAMES = [
@@ -64,9 +64,7 @@ export function generateRandomOpponent(playerBelt: Belt, _playerXp?: number): {
     remaining -= alloc;
   }
 
-  const belts: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
-  const beltIdx = belts.indexOf(belt);
-  const moveCount = 4 + beltIdx;
+  const moves = getArchetypeMoves(arch.id, belt);
 
   return {
     opponent: {
@@ -78,8 +76,8 @@ export function generateRandomOpponent(playerBelt: Belt, _playerXp?: number): {
       baseStats: { ...arch.baseStats },
       ivs: rollIVs(),
       evs,
-      moves: arch.startingMoves.slice(0, moveCount),
-      learnedMoves: [...arch.startingMoves], moveXp: {},
+      moves,
+      learnedMoves: [...moves], moveXp: {},
       frame: STYLE_FRAME[arch.style],
     },
     greeting,

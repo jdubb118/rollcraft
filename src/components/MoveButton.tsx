@@ -15,7 +15,8 @@ interface MoveButtonProps {
 
 export default function MoveButton({ move, onSelect, disabled, canAfford }: MoveButtonProps) {
   const isStall = move.id === '__stall__';
-  const color = isStall ? '#666' : STYLE_COLORS[move.style];
+  const isBasic = move.id.startsWith('fund-');
+  const color = isStall ? '#666' : isBasic ? '#8a8a8a' : STYLE_COLORS[move.style];
   const catIcon = CATEGORY_ICONS[move.category] || '•';
 
   return (
@@ -48,7 +49,7 @@ export default function MoveButton({ move, onSelect, disabled, canAfford }: Move
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         fontSize: 'var(--fs-xs)', color: '#888',
       }}>
-        <span>{isStall ? 'RECOVER' : `${catIcon} ${move.category.toUpperCase()}`}</span>
+        <span>{isStall ? 'RECOVER' : `${catIcon} ${isBasic ? 'BASIC ' : ''}${move.category.toUpperCase()}`}</span>
         {!isStall && (
           <span style={{ color: !canAfford ? '#ef4444' : '#666' }}>
             ⚡{move.staminaCost}

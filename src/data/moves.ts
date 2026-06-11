@@ -21,8 +21,10 @@ export const MOVES: Move[] = [
     chainPotential: ['knee-cut'], description: 'Single leg takedown.',
   },
   {
+    // Works from standing too (it's a real standing throw) — judoka needed a
+    // one-step entry to compete with one-step guard pulls.
     id: 'osoto-gari', name: 'Osoto Gari', category: 'takedown', style: 'judoka',
-    posReq: [neu('clinch')], resultPosition: 'side-control', resultRole: 'top',
+    posReq: [neu('clinch'), neu('standing')], resultPosition: 'side-control', resultRole: 'top',
     power: 65, accuracy: 75, staminaCost: 20, statAttack: 'str', statDefense: 'tgh',
     chainPotential: ['americana', 'kob-transition'], description: 'Major outer reap. Land in side control.',
     impact: { flinchChance: 0.20, recoil: 4 },
@@ -250,9 +252,11 @@ export const MOVES: Move[] = [
 
   // ═══ TRANSITIONS ═══
   {
+    // Was 100acc/5sta — a free ticket to the bottom game made guard styles
+    // dominate the balance sim (74-76% WR). Pulling works; it isn't free.
     id: 'pull-guard', name: 'Pull Guard', category: 'transition', style: 'guard-player',
     posReq: [neu('standing')], resultPosition: 'closed-guard', resultRole: 'bottom',
-    power: 0, accuracy: 100, staminaCost: 5, statAttack: 'spd', statDefense: 'spd',
+    power: 0, accuracy: 88, staminaCost: 8, statAttack: 'spd', statDefense: 'spd',
     chainPotential: ['armbar-guard', 'triangle', 'hip-bump'], description: 'Pull into closed guard.',
   },
   {

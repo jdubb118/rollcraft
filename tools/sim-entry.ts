@@ -10,7 +10,7 @@ import { createBattleState, executeTurn, getLegalMoves, STALL_MOVE } from '../sr
 import type { BattleState } from '../src/engine/types';
 import { POSITIONS, getRole } from '../src/data/positions';
 import { getMove } from '../src/data/moves';
-import { ARCHETYPES, ARCHETYPE_FRAMES } from '../src/data/archetypes';
+import { ARCHETYPES, ARCHETYPE_FRAMES, getArchetypeMoves } from '../src/data/archetypes';
 import { rollIVs } from '../src/engine/random';
 import type { Belt, Grappler, Move } from '../src/engine/types';
 
@@ -45,7 +45,7 @@ function makeGrappler(archIdx: number, tag: string): Grappler {
   return {
     id: `sim-${tag}`, name: `${arch.name}-${tag}`, style: arch.style, belt: BELT, xp: BELT_XP,
     baseStats: { ...arch.baseStats }, ivs: rollIVs(), evs,
-    moves: RICH ? RICH_SETS[arch.id] : arch.startingMoves.slice(0, 9), // live AI = 4 moves
+    moves: RICH ? RICH_SETS[arch.id] : getArchetypeMoves(arch.id, BELT), // live AI movesets
     learnedMoves: [...arch.startingMoves], moveXp: {},
     frame: ARCHETYPE_FRAMES[arch.id] || 'medium',
   };

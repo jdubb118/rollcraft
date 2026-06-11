@@ -1,4 +1,4 @@
-import type { Archetype, Frame } from '../engine/types';
+import type { Archetype, Belt, Frame } from '../engine/types';
 
 // Frame mapping per archetype
 export const ARCHETYPE_FRAMES: Record<string, Frame> = {
@@ -73,4 +73,33 @@ export const ARCHETYPES: Archetype[] = [
 
 export function getArchetype(id: string): Archetype | undefined {
   return ARCHETYPES.find(a => a.id === id);
+}
+
+// ── Belt-scaled move pools ──
+// Generated opponents draw from a 13-move pool sliced by belt, so a black-belt
+// Worlds finalist fights like one instead of with a white belt's 4 moves.
+// Pool order matters: the first 4 must be a functional white-belt kit
+// (standing entry + core game). Fundamentals fill any remaining gaps in battle.
+export const ARCHETYPE_MOVE_POOLS: Record<string, string[]> = {
+  'pressure-machine': ['double-leg', 'knee-cut', 'americana', 'smash-pass', 'posture-up', 'over-under', 'arm-triangle', 'shrimp-escape', 'kob-transition', 'body-lock-pass', 'ezekiel', 'guard-slam', 'darce'],
+  'guard-wizard': ['pull-guard', 'scissor-sweep', 'triangle', 'armbar-guard', 'guard-recovery', 'hip-bump', 'butterfly-sweep', 'omoplata', 'elbow-escape', 'flower-sweep', 'x-guard-sweep', 'spider-sweep', 'gogoplata'],
+  'takedown-artist': ['double-leg', 'single-leg', 'snap-down', 'bridge-escape', 'high-crotch', 'front-headlock', 'turtle-standup', 'underhook-escape', 'russian-tie', 'ankle-pick', 'firemans-carry', 'suplex', 'arm-drag-back'],
+  'leg-reaper': ['leg-entry', 'heel-hook', 'ankle-lock', 'single-leg', 'toe-hold', 'kneebar', 'leg-reposition', 'saddle-entry', 'estima-lock', 'imanari-roll', 'outside-heel-hook', 'calf-slicer', 'fifty-fifty-sweep'],
+  'flow-roller': ['pull-guard', 'berimbolo-sweep', 'seatbelt-back-take', 'rnc', 'dlr-sweep', 'granby-roll', 'back-take-transition', 'reverse-dlr', 'long-step', 'armbar-back', 'dlr-to-back', 'mount-to-back', 'sit-up-sweep'],
+  // clinch-entry FIRST — judoka throws need the clinch; without an entry this
+  // archetype could not play the game at all (0.8% sim win rate).
+  'judo-heavy': ['clinch-entry', 'osoto-gari', 'knee-cut', 'americana', 'seoi-nage', 'ouchi-gari', 'foot-sweep', 'bridge-escape', 'kob-transition', 'harai-goshi', 'uchi-mata', 'tani-otoshi', 'kata-guruma'],
+  'finish-hunter': ['guillotine', 'kimura', 'pull-guard', 'darce', 'snap-down', 'triangle', 'anaconda', 'front-headlock', 'armbar-mount', 'arm-triangle', 'loop-choke', 'ezekiel', 'mounted-triangle'],
+  'chess-player': ['snap-down', 'kob-transition', 'americana', 'mount-transition', 'clinch-entry', 'ns-transition', 'shrimp-escape', 'cross-collar-mount', 'ezekiel', 'kimura', 'paper-cutter', 'gift-wrap', 'ns-choke'],
+};
+
+const BELT_POOL_SIZE: Record<Belt, number> = {
+  white: 4, blue: 6, purple: 8, brown: 10, black: 12,
+};
+
+/** The moveset a generated opponent of this archetype gets at this belt. */
+export function getArchetypeMoves(archetypeId: string, belt: Belt): string[] {
+  const pool = ARCHETYPE_MOVE_POOLS[archetypeId];
+  if (!pool) return getArchetype(archetypeId)?.startingMoves ?? [];
+  return pool.slice(0, BELT_POOL_SIZE[belt]);
 }

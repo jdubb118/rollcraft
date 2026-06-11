@@ -21,6 +21,8 @@ import { createParticleSystem, type ParticleSystem } from '../engine/particles';
 import { createAmbientState, tickAmbient, type AmbientState } from '../engine/ambientParticles';
 import { getRegionAtmosphere, getNextObjective, REGIONS } from '../data/world';
 import { getPendingChallenge, clearPendingChallenge } from '../engine/challenge';
+import { getDailyRollState, buildDailyOpponent, markDailyAttempted, getCoachGift, claimCoachGift, getFreshLegsRemaining } from '../engine/daily';
+import { addMoney } from '../state/saveLoad';
 import { playRegionBGM } from '../engine/audio';
 import { preloadNPC } from '../render/NPCSprites';
 import { getRegionBG } from '../render/RegionBGs';
@@ -66,6 +68,7 @@ export default function OverworldScreen() {
   const regionIdRef = useRef<string>('home');
   const wasMovingRef = useRef(false);
   const [arrivalText, setArrivalText] = useState<string[] | null>(null);
+  const [, setGiftTick] = useState(0); // re-render after claiming the coach gift
   const navigate = useNavigate();
   const particlesRef = useRef<ParticleSystem>(createParticleSystem(60));
   const ambientRef = useRef<AmbientState>(createAmbientState());
@@ -117,6 +120,15 @@ export default function OverworldScreen() {
     let rafId = 0;
     let stopped = false;
 
+    // Gym wall trophies — computed once per mount, not per frame
+    const progSnapshot = loadProgression();
+    const trophies = {
+      golds: progSnapshot.tournamentResults.filter(r => r.placement === 'gold').length,
+      stampColors: progSnapshot.stamps
+        .map(sid => REGIONS.find(r => r.stampId === sid)?.color)
+        .filter((c): c is string => !!c),
+    };
+
     const frame = (time: number) => {
       if (stopped) return;
       const dt = lastTime === 0 ? 0 : Math.min((time - lastTime) / 1000, 0.1);
@@ -161,7 +173,7 @@ export default function OverworldScreen() {
 
       const ctx = canvasRef.current!.getContext('2d')!;
       ctx.imageSmoothingEnabled = false;
-      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName, regionIdRef.current);
+      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName, regionIdRef.current, trophies);
 
       // Ambient particles on overlay canvas
       if (effectsCanvasRef.current) {
@@ -587,6 +599,11 @@ export default function OverworldScreen() {
               );
 
           const challenge = getPendingChallenge();
+          const daily = getDailyRollState();
+          // getCoachGift() derives from the stored claim date — stays correct
+          // across midnight without any sticky local flag
+          const coachGift = getCoachGift();
+          const freshLeft = getFreshLegsRemaining();
 
           return (
             <div className="ui-tray">
@@ -621,6 +638,53 @@ export default function OverworldScreen() {
                   <div style={{ fontSize: 'var(--fs-xs)', color: '#998', lineHeight: 1.7 }}>
                     {objective.detail}
                   </div>
+                </div>
+              )}
+
+              {/* Coach's daily gift */}
+              {coachGift && (
+                <button
+                  onClick={() => {
+                    claimCoachGift();
+                    addMoney(coachGift.money);
+                    setGiftTick(t => t + 1);
+                  }}
+                  style={{
+                    marginTop: 8, padding: '10px 12px', textAlign: 'left',
+                    background: '#11160e', border: '1px solid #22c55e', borderRadius: 8,
+                    color: '#22c55e', fontSize: 'var(--fs-xs)', lineHeight: 1.7,
+                  }}
+                >
+                  🥋 {(player.coachName || 'COACH').toUpperCase()}: "{coachGift.line}" — TAP TO ACCEPT +${coachGift.money}
+                </button>
+              )}
+
+              {/* Daily Roll */}
+              {!daily.attempted && (
+                <button
+                  onClick={() => {
+                    const opp = buildDailyOpponent(player.belt);
+                    saveOpponent(opp);
+                    markDailyAttempted();
+                    navigate('/battle');
+                  }}
+                  style={{
+                    marginTop: 8, padding: '10px 12px', textAlign: 'left',
+                    background: '#16110e', border: '1px solid #ff9800', borderRadius: 8,
+                    color: '#ff9800', fontSize: 'var(--fs-xs)', lineHeight: 1.7,
+                  }}
+                >
+                  🎲 DAILY ROLL{daily.streak > 0 ? ` — ${daily.streak} DAY STREAK` : ''}: one shot, one challenger. TAP TO FIGHT
+                </button>
+              )}
+
+              {/* Fresh Legs indicator */}
+              {freshLeft > 0 && (
+                <div style={{
+                  marginTop: 8, padding: '6px 12px', textAlign: 'center',
+                  fontSize: 'var(--fs-xs)', color: '#22c55e', letterSpacing: 1,
+                }}>
+                  ⚡ FRESH LEGS — next {freshLeft} win{freshLeft > 1 ? 's' : ''} earn 2× XP
                 </div>
               )}
 

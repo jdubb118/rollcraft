@@ -1,6 +1,6 @@
 import type { Tournament, Grappler, Belt, Style } from '../engine/types';
 import { rollIVs } from '../engine/random';
-import { ARCHETYPES } from './archetypes';
+import { ARCHETYPES, getArchetypeMoves } from './archetypes';
 
 // ── Tournament definitions ──
 export const TOURNAMENTS: Tournament[] = [
@@ -143,8 +143,8 @@ export function generateBracket(tournament: Tournament, playerName: string): Gra
       baseStats: { ...arch.baseStats },
       ivs: rollIVs(),
       evs,
-      moves: arch.startingMoves.slice(0, 4 + beltIdx),
-      learnedMoves: [...arch.startingMoves], moveXp: {},
+      moves: getArchetypeMoves(arch.id, belt),
+      learnedMoves: getArchetypeMoves(arch.id, belt), moveXp: {},
       frame: STYLE_FRAME[arch.style],
     });
   }

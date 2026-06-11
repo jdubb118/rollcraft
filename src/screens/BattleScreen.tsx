@@ -12,6 +12,7 @@ import { loadPlayer, loadOpponent, saveBattleResult, isScouted, markScouted, get
 import ScoutPanel from '../components/ScoutPanel';
 import { sfxHit, sfxCritical, sfxMiss, sfxSubmissionLock, sfxTap, sfxPointsScored, sfxTimeUp, sfxStunned, sfxEscape, sfxMenuSelect, initAudio } from '../engine/sound';
 import { createParticleSystem, type ParticleSystem } from '../engine/particles';
+import { consumeFreshLegsWin, FRESH_LEGS_XP_MULT } from '../engine/daily';
 
 interface ShakeState { amount: number; endsAt: number; }
 interface FlashState { color: string; until: number; strength: number; }
@@ -79,6 +80,22 @@ function processBattleBeat(
     setShake(3, 250);
   }
   if (text.includes('Escaped') || text.includes('retained') || text.includes('Scrambled')) sfxEscape();
+
+  // ── Key-moment splashes — the big beats shouldn't live only in the log ──
+  const splash = (label: string, color: string, size = 13) => {
+    particles.spawn({
+      x: 160, y: 96, vx: 0, vy: -14,
+      kind: 'float', text: label, color, maxLife: 1.3, size,
+    });
+  };
+  if (text.includes('⚡ TAKEDOWN!')) splash('TAKEDOWN!', '#ffd700');
+  else if (text.includes('⚡ SWEEP!')) splash('SWEEP!', '#ffd700');
+  else if (text.includes('⚡ GUARD PASS!')) splash('GUARD PASSED!', '#ffd700');
+  else if (text.includes('⚡ MOUNT!')) splash('MOUNT!', '#ff9800');
+  else if (text.includes('⚡ BACK CONTROL!')) splash('BACK TAKE!', '#ff9800');
+  else if (text.includes('⚡ KNEE ON BELLY!')) splash('KNEE ON BELLY!', '#ffd700');
+  if (text.includes('Phase 1/3')) splash('SUBMISSION!', '#ef4444', 11);
+  if (text.includes('taps out')) splash('TAP!!', '#ff6b6b', 16);
 }
 
 const TUTORIAL_KEY = 'rollcraft-battle-tutorial-seen';
@@ -253,7 +270,14 @@ export default function BattleScreen() {
       // Challenge opponents come from untrusted URLs — flat XP so crafted
       // max-belt links can't be farmed for progression.
       const isChallengeOpp = newState.opponent.grappler.id.startsWith('challenge-');
-      const xpGained = isChallengeOpp ? Math.min(60, baseXp) : Math.floor(baseXp * mult);
+      let xpGained = isChallengeOpp ? Math.min(60, baseXp) : Math.floor(baseXp * mult);
+
+      // Fresh Legs — first wins of the day hit different
+      let freshLegs = false;
+      if (isWin) {
+        freshLegs = consumeFreshLegsWin();
+        if (freshLegs) xpGained = Math.floor(xpGained * FRESH_LEGS_XP_MULT);
+      }
 
       // Mark opponent as scouted (now you know their tendencies)
       markScouted(newState.opponent.grappler.name);
@@ -269,9 +293,12 @@ export default function BattleScreen() {
       if (activeTourneyId) localStorage.removeItem('rollcraft-active-tourney-id');
 
       saveBattleResult({
+        ts: Date.now(),
         winner: newState.winner ?? 'draw',
         method: newState.winMethod ?? 'points',
         xpGained,
+        freshLegs,
+        finishingMoveId: newState.finishingMoveId,
         turns: newState.turn,
         playerName: newState.player.grappler.name,
         opponentName: newState.opponent.grappler.name,

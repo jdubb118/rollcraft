@@ -1,18 +1,19 @@
 import { Howl, Howler } from 'howler';
 import { getEffectiveBgmVolume, getSettings } from './settings';
 
-// Per-region BGM tracks. Files are OPTIONAL — if missing, load errors fail silently.
-// Drop OGG (or MP3) files at these paths to wire real music; infra is ready for it.
+// Per-region BGM tracks — generative chiptune loops (scripts/gen-bgm.mjs).
+// Missing files fail silently, so swapping in composed tracks later is a
+// drop-in replacement.
 const BGM_FILES: Record<string, string> = {
-  'home':            '/audio/bgm/home.ogg',
-  'scramble-valley': '/audio/bgm/scramble.ogg',
-  'old-town':        '/audio/bgm/oldtown.ogg',
-  'steel-mountain':  '/audio/bgm/steel.ogg',
-  'coral-bay':       '/audio/bgm/coral.ogg',
-  'sambo-district':  '/audio/bgm/sambo.ogg',
-  'nova-camp':       '/audio/bgm/nova.ogg',
-  'iron-coast':      '/audio/bgm/iron.ogg',
-  'summit-city':     '/audio/bgm/summit.ogg',
+  'home':            '/audio/bgm/home.mp3',
+  'scramble-valley': '/audio/bgm/scramble.mp3',
+  'old-town':        '/audio/bgm/oldtown.mp3',
+  'steel-mountain':  '/audio/bgm/steel.mp3',
+  'coral-bay':       '/audio/bgm/coral.mp3',
+  'sambo-district':  '/audio/bgm/sambo.mp3',
+  'nova-camp':       '/audio/bgm/nova.mp3',
+  'iron-coast':      '/audio/bgm/iron.mp3',
+  'summit-city':     '/audio/bgm/summit.mp3',
 };
 
 interface Track { howl: Howl; id: number; url: string; }

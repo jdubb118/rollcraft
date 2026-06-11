@@ -12,7 +12,7 @@ const DEFAULTS: Settings = {
   modernVisuals: true,
   masterVolume: 0.7,
   sfxVolume: 1.0,
-  bgmVolume: 0.8,
+  bgmVolume: 0.45, // chiptune loops ship polite — players can turn it up
   muted: false,
 };
 

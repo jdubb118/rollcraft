@@ -32,11 +32,14 @@ function calcHp(base: number, iv: number, ev: number, level: number): number {
   return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10) + 60;
 }
 
-// Frame multipliers — light fighters are fast+flexible, heavy are strong+tough
+// Frame multipliers — light fighters are fast+flexible, heavy are strong+tough.
+// Softened from ±15% — SPD (initiative) and FLX (sub defense) are the two most
+// valuable currencies in the engine, so the old spread made light frames
+// strictly better (sim: light styles 69-77% WR vs heavies 17-33%).
 const FRAME_MODS: Record<Frame, Partial<Record<StatKey, number>>> = {
-  light:  { str: 0.85, flx: 1.10, spd: 1.15 },
+  light:  { str: 0.88, flx: 1.07, spd: 1.10 },
   medium: {},
-  heavy:  { str: 1.15, tgh: 1.10, spd: 0.90, flx: 0.90 },
+  heavy:  { str: 1.15, tgh: 1.10, spd: 0.95, flx: 0.94 },
 };
 
 export function computeStats(grappler: Grappler): Stats {

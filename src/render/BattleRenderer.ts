@@ -103,9 +103,16 @@ function drawBar(
 }
 
 function drawPixelText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string) {
-  ctx.fillStyle = color;
   ctx.font = `${size}px "Press Start 2P", monospace`;
   ctx.textBaseline = 'top';
+  // 1px black outline — canvas text was unreadable on light backgrounds
+  // (gold position text on gold tatami, names over bright mats)
+  ctx.fillStyle = '#000';
+  ctx.fillText(text, x - 1, y);
+  ctx.fillText(text, x + 1, y);
+  ctx.fillText(text, x, y - 1);
+  ctx.fillText(text, x, y + 1);
+  ctx.fillStyle = color;
   ctx.fillText(text, x, y);
 }
 
@@ -344,6 +351,15 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   ctx.textAlign = 'center';
   drawPixelText(ctx, posDisplay.toUpperCase(), CANVAS_WIDTH / 2 - posDisplay.length * 3, CANVAS_HEIGHT / 2 + 58, 7, '#ffd700');
   ctx.textAlign = 'start';
+
+  // ── Positional pressure pips — who's settling in on top ──
+  if (state.control.by && state.control.turns >= 1) {
+    const pips = '▰'.repeat(Math.min(4, state.control.turns));
+    const isPlayerControl = state.control.by === 'player';
+    const px2 = isPlayerControl ? CANVAS_WIDTH - 155 : 10;
+    const py2 = isPlayerControl ? CANVAS_HEIGHT - 56 : 44;
+    drawPixelText(ctx, `PRESSURE ${pips}`, px2, py2, 6, '#ff9800');
+  }
 
   ctx.restore();
 }

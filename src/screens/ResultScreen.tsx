@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadBattleResult, loadPlayer, savePlayer, recordWin, recordLoss, addMoney, loadProgression } from '../state/saveLoad';
+import {
+  loadBattleResult, loadPlayer, savePlayer, recordWin, recordLoss, addMoney, loadProgression,
+  recordCaughtBy, getCaughtCount, clearCaughtCount,
+} from '../state/saveLoad';
 import { STYLE_NAMES } from '../engine/constants';
-import { BELT_XP_THRESHOLDS } from '../engine/types';
+import { BELT_XP_THRESHOLDS, BELT_MOVE_SLOTS } from '../engine/types';
 import type { Belt, StatKey } from '../engine/types';
 import { getMoveXpGain, getMoveBonus, getMasteryLabel } from '../battle/moveXp';
+import { getMove } from '../data/moves';
 import { shareCard } from '../engine/shareCard';
 import { createChallengeUrl } from '../engine/challenge';
 import { track, trackGymWin } from '../engine/analytics';
+import { getDailyRollState, recordDailyResult } from '../engine/daily';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 
@@ -67,19 +72,53 @@ const STAT_COLORS: Record<StatKey, string> = {
 };
 const EV_CAP = 252; // per stat
 
+const PROCESSED_KEY = 'rollcraft-result-processed';
+
 export default function ResultScreen() {
   const navigate = useNavigate();
   const result = loadBattleResult();
   const player = loadPlayer();
   const [shareState, setShareState] = useState<'idle' | 'working' | 'done' | 'copied'>('idle');
+  const [caughtLearned, setCaughtLearned] = useState(false);
+  const [, setEffectsTick] = useState(0); // re-render after one-shot effects write localStorage
+
+  const isWin = result?.winner === 'player';
+  const isDraw = result?.winner === 'draw';
+  const isDaily = !!result?.opponentId?.startsWith('daily-');
+
+  // One-shot side effects per battle (guarded by result.ts so StrictMode /
+  // remounts can't double-count): daily streak, caught-by, analytics.
+  useEffect(() => {
+    if (!result || !result.ts) return;
+    if (localStorage.getItem(PROCESSED_KEY) === String(result.ts)) return;
+    localStorage.setItem(PROCESSED_KEY, String(result.ts));
+
+    if (isDaily) {
+      // The day the roll was started lives in the opponent id (daily-YYYY-MM-DD)
+      const forDate = result.opponentId!.replace('daily-', '');
+      const streak = recordDailyResult(isWin, forDate);
+      track('daily-roll', isWin ? `win-streak-${Math.min(streak, 30)}` : 'loss');
+      if (isWin) addMoney(100); // daily bonus purse
+    }
+    if (!isWin && !isDraw && result.method === 'submission' && result.finishingMoveId
+        && !result.finishingMoveId.startsWith('fund-') && getMove(result.finishingMoveId)) {
+      recordCaughtBy(result.finishingMoveId);
+    }
+    setEffectsTick(t => t + 1); // caughtCount / streak read localStorage — re-render with fresh values
+  }, [result?.ts]);
 
   if (!result || !player) {
     navigate('/');
     return null;
   }
 
-  const isWin = result.winner === 'player';
-  const isDraw = result.winner === 'draw';
+  // Learn-by-getting-caught: tapped by the same real technique twice → you've
+  // felt it from the inside. Losses literally teach.
+  const caughtMove = !isWin && result.finishingMoveId && !result.finishingMoveId.startsWith('fund-')
+    ? getMove(result.finishingMoveId) : undefined;
+  const caughtCount = caughtMove ? getCaughtCount(caughtMove.id) : 0;
+  const canLearnCaught = !!caughtMove && caughtCount >= 2
+    && !(player.learnedMoves || []).includes(caughtMove.id) && !caughtLearned;
 
   // Calculate EV gains
   const evGains = calculateEVGains(result.method, isWin, result.turns);
@@ -160,6 +199,24 @@ export default function ResultScreen() {
         <div>Turns: {result.turns} | +${moneyEarned}</div>
       </div>
 
+      {/* Daily Roll streak */}
+      {isDaily && (
+        <div style={{
+          padding: '10px 16px', textAlign: 'center', width: '100%', maxWidth: 280,
+          background: isWin ? '#1a1a0e' : '#1a0e0e',
+          border: `2px solid ${isWin ? '#ffd700' : '#ef4444'}`,
+        }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: isWin ? '#ffd700' : '#ef4444' }}>
+            {isWin
+              ? `DAILY ROLL ✓ — STREAK: ${getDailyRollState().streak}`
+              : 'DAILY ROLL FAILED — STREAK RESET'}
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#888', marginTop: 4 }}>
+            {isWin ? '+$100 bonus. Same time tomorrow.' : 'A new challenger lands tomorrow.'}
+          </div>
+        </div>
+      )}
+
       {/* XP + Belt progress */}
       <div style={{
         padding: '12px 20px', background: '#111', border: '2px solid #ffd700',
@@ -167,6 +224,14 @@ export default function ResultScreen() {
       }}>
         <div style={{ fontSize: 'var(--fs-lg)', color: '#ffd700', marginBottom: 8 }}>
           +{result.xpGained} XP
+          {result.freshLegs && (
+            <span style={{
+              fontSize: 'var(--fs-xs)', color: '#22c55e', marginLeft: 8,
+              border: '1px solid #22c55e', padding: '2px 6px',
+            }}>
+              FRESH LEGS 2×
+            </span>
+          )}
         </div>
         <div style={{ fontSize: 'var(--fs-xs)', color: '#888', marginBottom: 4 }}>
           {player.belt.toUpperCase()} BELT {nextBelt ? `→ ${nextBelt.toUpperCase()}` : '(MAX)'}
@@ -229,6 +294,47 @@ export default function ResultScreen() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Learn by getting caught */}
+      {canLearnCaught && caughtMove && (
+        <div style={{
+          padding: '12px 16px', background: '#0e1420', border: '2px solid #3498db',
+          width: '100%', maxWidth: 280, textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#3498db', lineHeight: 1.8, marginBottom: 8 }}>
+            You've felt the {caughtMove.name} from the inside {caughtCount} times now.
+            You know how it works.
+          </div>
+          <button
+            onClick={() => {
+              if (!player.learnedMoves) player.learnedMoves = [...player.moves];
+              if (!player.learnedMoves.includes(caughtMove.id)) player.learnedMoves.push(caughtMove.id);
+              if (player.moves.length < BELT_MOVE_SLOTS[player.belt] && !player.moves.includes(caughtMove.id)) {
+                player.moves.push(caughtMove.id);
+              }
+              savePlayer(player);
+              clearCaughtCount(caughtMove.id);
+              setCaughtLearned(true);
+              track('caught-learn', caughtMove.id);
+            }}
+            style={{
+              padding: '10px 20px', background: '#1a2a3a', color: '#3498db',
+              fontSize: 'var(--fs-sm)', border: '2px solid #3498db',
+            }}
+          >
+            LEARN {caughtMove.name.toUpperCase()}
+          </button>
+        </div>
+      )}
+      {caughtLearned && caughtMove && (
+        <div style={{
+          fontSize: 'var(--fs-sm)', color: '#22c55e', textAlign: 'center',
+          padding: '8px 16px', border: '1px solid #22c55e', background: '#0e1a0e',
+          width: '100%', maxWidth: 280,
+        }}>
+          {caughtMove.name.toUpperCase()} LEARNED — pain is a teacher.
         </div>
       )}
 

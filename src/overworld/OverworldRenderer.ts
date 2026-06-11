@@ -170,6 +170,35 @@ function drawLighting(ctx: CanvasRenderingContext2D) {
 
 // ── Main render ─────────────────────────────────────────────────────────────
 
+// ── Gym wall trophies — your career, rendered where you train ──
+// Gold pennants for tournament golds, colored shields for region stamps.
+// Investment that isn't displayed doesn't retain.
+function drawGymWall(ctx: CanvasRenderingContext2D, golds: number, stampColors: string[]) {
+  const wallY = 6;
+  // Tournament gold pennants along the top wall
+  for (let i = 0; i < Math.min(golds, 8); i++) {
+    const x = 86 + i * 13;
+    ctx.fillStyle = '#8b6914';
+    ctx.fillRect(x, wallY, 9, 2);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(x + 1, wallY + 2, 7, 5);
+    ctx.beginPath();
+    ctx.moveTo(x + 1, wallY + 7);
+    ctx.lineTo(x + 4.5, wallY + 11);
+    ctx.lineTo(x + 8, wallY + 7);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Stamp shields on the right side of the top wall
+  for (let i = 0; i < Math.min(stampColors.length, 7); i++) {
+    const x = 206 + i * 10;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x, wallY + 2, 8, 8);
+    ctx.fillStyle = stampColors[i];
+    ctx.fillRect(x + 1, wallY + 3, 6, 6);
+  }
+}
+
 export function renderOverworld(
   ctx: CanvasRenderingContext2D,
   state: OverworldState,
@@ -178,6 +207,7 @@ export function renderOverworld(
   playerBelt: Belt,
   coachName?: string,
   regionId?: string,
+  trophies?: { golds: number; stampColors: string[] },
 ) {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -350,6 +380,11 @@ export function renderOverworld(
   for (const s of sprites) {
     if (s.w && s.h) ctx.drawImage(s.canvas, s.x, s.y, s.w, s.h);
     else ctx.drawImage(s.canvas, s.x, s.y);
+  }
+
+  // ── Layer 5.5: gym wall trophies (home gym only) ──────────────────────────
+  if (regionId === 'home' && trophies && (trophies.golds > 0 || trophies.stampColors.length > 0)) {
+    drawGymWall(ctx, trophies.golds, trophies.stampColors);
   }
 
   // ── Layer 6: NPC labels + interaction prompts ─────────────────────────────

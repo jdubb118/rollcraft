@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { hasExistingPlayer, saveOpponent } from '../state/saveLoad';
 import { getPendingChallenge, clearPendingChallenge } from '../engine/challenge';
+import { getDailyRollState } from '../engine/daily';
 
 export default function TitleScreen() {
   const navigate = useNavigate();
   const hasSave = hasExistingPlayer();
   const challenge = getPendingChallenge();
+  const daily = hasSave ? getDailyRollState() : null;
 
   return (
     <div className="game-shell" style={{
@@ -91,6 +93,16 @@ export default function TitleScreen() {
           >
             CONTINUE
           </button>
+        )}
+        {daily && !daily.attempted && (
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#ff9800', textAlign: 'center', letterSpacing: 1 }} className="blink">
+            🎲 DAILY ROLL WAITING{daily.streak > 0 ? ` — ${daily.streak} DAY STREAK ON THE LINE` : ''}
+          </div>
+        )}
+        {daily && daily.attempted && daily.won && (
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', textAlign: 'center', letterSpacing: 1 }}>
+            DAILY ✓ — STREAK: {daily.streak}
+          </div>
         )}
       </div>
 
