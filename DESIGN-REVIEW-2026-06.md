@@ -431,3 +431,75 @@ Sequencing vs Parts 1-2: combat Week 1 still goes first — viral growth pointed
 a game with 53% dead turns wastes the traffic. Identity Engine V1 slots in as
 Week 2-3 alongside the retention layer, and the Academia pilot becomes the first
 real gym.
+
+---
+
+# Part 4 — The 2026 Flow (Jeff's playtest feedback, June 11)
+
+Field report from the founder's first real spin: the pieces exist but the flow
+isn't a 2026 product. Sprite creator buried in a menu produced "a pixelated
+headshot with a background" instead of a game character; no obvious account
+story; identity creation disconnected from onboarding. All correct. The redesign:
+
+## 1. The character pipeline (the actual fix for "that's not what I wanted")
+
+What the player expects: photo in → A GAME CHARACTER OF ME out — full body, in
+my gi color, facing all four directions, walking around the overworld, fighting
+in battles. Not a pixel photo.
+
+PixelLab's character suite delivers exactly this (probed June 11):
+- `/create-character-pro` `method=create_from_concept`: raw photo (≤1024²) as
+  concept + "wearing a white gi with white belt" description → **8 directional
+  rotations** of a stylized game character, transparent, skeleton-fitted.
+- `/create-character-v3` `reference_image`: rotates a south-facing sprite into
+  the 4 game directions.
+- Characters persist server-side (`/characters/{id}`) with an animation system
+  (`/animate-character`, skeleton-based) — walk cycles become possible later,
+  which the April spike thought was dead.
+
+New pipeline: photo → create-character-pro (gi color from the player's pick
+woven into the description) → 4 of the 8 rotations map to overworld
+north/south/east/west + south doubles as battle stance → stored as the
+player's directional sprite set (replaces single customSprite; belt sprites
+remain the no-photo default). Old single-sprite path retired.
+
+Cost: measure per-character gen burn from the spike usage field; if ~20-40
+gens/character, raise the monthly cap and treat ~$0.15-0.30/character as the
+hero-feature cost. Device cap (5) already prevents abuse.
+
+## 2. Where identity creation lives: inside onboarding
+
+New-game flow becomes:
+1. Name → gym → coach → **gi color** (unchanged, fast — and the gi pick now
+   feeds the character prompt)
+2. **"BECOME THE FIGHTER"** — camera/selfie upload, full-screen moment, with
+   "skip — use a classic fighter" escape hatch. On upload, generation kicks off
+   IN THE BACKGROUND immediately.
+3. Cinematic walk-in → choose training group → first techniques → Kenzo fight
+   — 2-4 minutes of gameplay that exactly covers generation latency.
+4. **The reveal**: after the rival aftermath (or via overworld toast when
+   ready): "YOUR FIGHTER IS READY" — photo → sprite side-by-side, auto-equip,
+   one-tap share card. The reveal IS the first share moment.
+5. Sprite creator stays in MENU → SPRITE as the *re-roll* surface, not the
+   discovery surface.
+
+## 3. Login: anonymous-first, email at the investment moment
+
+- **Never a login wall.** Instant play is the funnel advantage.
+- **Supabase anonymous auth on boot** — every player silently gets a real
+  account from second one; cloud save just works with zero UI.
+- **"Save your fighter"** prompt at the first real investment moment (first
+  promotion, or right after the character reveal): enter email → magic link →
+  account upgraded in place (same user id, nothing lost).
+- Cross-device = sign in with that email anywhere; the existing
+  pull-on-startup logic restores the save. Settings keeps manual sign-in/out.
+- Requires: enable anonymous sign-ins in Supabase auth config (Management API
+  PATCH), create the missing `profiles` table (auth.ts references it — another
+  never-created ghost like `saves` was).
+
+## 4. Sequence
+
+Spike create-character-pro quality/cost → if good: build pipeline + new
+onboarding step + reveal moment → anonymous auth + save-your-fighter nudge →
+ship → THEN the Academia pilot (don't seed the gym chat until the first-photo
+moment is the 2026 version).
