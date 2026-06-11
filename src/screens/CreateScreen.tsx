@@ -8,6 +8,7 @@ import type { Grappler, Frame, Style } from '../engine/types';
 import { ARCHETYPES } from '../data/archetypes';
 import { RIVAL_NAME, RIVAL_STYLE_MAP } from '../data/storyArc';
 import { track } from '../engine/analytics';
+import { getPendingGym, fetchGym, joinGym } from '../engine/gyms';
 
 function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -70,6 +71,14 @@ export default function CreateScreen() {
   // Funnel: creation flow opened
   useEffect(() => {
     if (!localStorage.getItem('rollcraft-show-aftermath')) track('create-started');
+  }, []);
+
+  // Joining via gym invite — pre-fill the gym name so the cinematic walks
+  // you into the gym you actually train at
+  useEffect(() => {
+    const pending = getPendingGym();
+    if (!pending) return;
+    fetchGym(pending).then(d => setGymName(prev => prev || d.gym.name)).catch(() => {});
   }, []);
 
   // Check if returning from onboarding battle
@@ -189,6 +198,9 @@ export default function CreateScreen() {
         savePlayer(player);
         localStorage.setItem('rollcraft-story-rival-origin', 'true');
         track('create-completed', path.style);
+        // Came in through a gym invite link → join the roster automatically
+        const pendingGym = getPendingGym();
+        if (pendingGym) joinGym(pendingGym, player).catch(() => {});
         navigate('/overworld');
       }
     }

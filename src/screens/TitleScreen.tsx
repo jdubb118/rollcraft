@@ -1,13 +1,21 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { hasExistingPlayer, saveOpponent } from '../state/saveLoad';
 import { getPendingChallenge, clearPendingChallenge } from '../engine/challenge';
 import { getDailyRollState } from '../engine/daily';
+import { getPendingGym } from '../engine/gyms';
 
 export default function TitleScreen() {
   const navigate = useNavigate();
   const hasSave = hasExistingPlayer();
   const challenge = getPendingChallenge();
   const daily = hasSave ? getDailyRollState() : null;
+
+  // A gym invite link was opened — go straight to the gym page
+  useEffect(() => {
+    const pending = getPendingGym();
+    if (pending) navigate(`/gym?id=${pending}`);
+  }, [navigate]);
 
   return (
     <div className="game-shell" style={{

@@ -7,6 +7,7 @@ import { COACH_DIALOGUE } from '../data/storyArc';
 import { sfxBeltPromotion } from '../engine/sound';
 import { shareCard } from '../engine/shareCard';
 import { track } from '../engine/analytics';
+import { syncGymMember } from '../engine/gyms';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 const BELT_COLORS: Record<Belt, string> = {
@@ -70,6 +71,7 @@ export default function PromotionScreen() {
       player.belt = nextBelt;
       savePlayer(player);
       track('promotion', nextBelt);
+      syncGymMember(player); // roster shows the new belt
       setPhase('done');
     } else {
       navigate('/overworld');

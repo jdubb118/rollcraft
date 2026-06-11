@@ -158,41 +158,131 @@ export async function renderShareCard(opts: ShareCardOptions): Promise<HTMLCanva
   return canvas;
 }
 
+/** Ship any canvas via the native sheet (download fallback). */
+export async function shareCanvas(canvas: HTMLCanvasElement, filename: string, text: string): Promise<'shared' | 'downloaded' | 'failed'> {
+  try {
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) return 'failed';
+    const file = new File([blob], filename, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text });
+      return 'shared';
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return 'downloaded';
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') return 'shared';
+    console.warn('[shareCanvas] failed:', err);
+    return 'failed';
+  }
+}
+
 /** Share via the native sheet when possible, otherwise download. Returns how it shipped. */
 export async function shareCard(opts: ShareCardOptions): Promise<'shared' | 'downloaded' | 'failed'> {
   try {
     const canvas = await renderShareCard(opts);
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-    if (!blob) return 'failed';
-
-    const file = new File([blob], `grapple-quest-${opts.kind}.png`, { type: 'image/png' });
     const shareText = opts.kind === 'promotion'
       ? `Just got promoted to ${opts.player.belt} belt in Grapple Quest 🥋 grapplequest.com`
       : opts.kind === 'champion'
         ? `WORLD CHAMPION in Grapple Quest 🥋🏆 grapplequest.com`
         : `Got the W in Grapple Quest 🥋 grapplequest.com`;
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text: shareText });
-      track('share-clicked', `${opts.kind}-native`);
-      return 'shared';
-    }
-
-    // Download fallback
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    track('share-clicked', `${opts.kind}-download`);
-    return 'downloaded';
+    const result = await shareCanvas(canvas, `grapple-quest-${opts.kind}.png`, shareText);
+    if (result !== 'failed') track('share-clicked', `${opts.kind}-${result === 'shared' ? 'native' : 'download'}`);
+    return result;
   } catch (err) {
-    // AbortError = user closed the share sheet; not a failure worth surfacing
-    if ((err as Error).name === 'AbortError') return 'shared';
     console.warn('[shareCard] failed:', err);
     return 'failed';
   }
+}
+
+// ── Team photo — the gym's roster lined up on their mat ──
+
+interface TeamMember {
+  name: string;
+  belt: Belt;
+  sprite: string | null; // base64
+}
+
+function loadImg(src: string): Promise<HTMLImageElement | null> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+export async function renderTeamPhoto(
+  gymName: string, gymId: string, teamWins: number, members: TeamMember[],
+): Promise<HTMLCanvasElement> {
+  await ensureFont();
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = false;
+
+  // Background + mat
+  const grad = ctx.createLinearGradient(0, 0, 0, SIZE);
+  grad.addColorStop(0, '#0d0d1f');
+  grad.addColorStop(1, '#06060e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // The mat — green field with border, like the gym
+  ctx.fillStyle = '#1f6b33';
+  ctx.fillRect(80, 280, SIZE - 160, 560);
+  ctx.strokeStyle = '#2da44e';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(96, 296, SIZE - 192, 528);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  for (let x = 80 + 88; x < SIZE - 80; x += 88) {
+    ctx.beginPath(); ctx.moveTo(x, 280); ctx.lineTo(x, 840); ctx.stroke();
+  }
+
+  // Header
+  px(ctx, gymName.toUpperCase(), SIZE / 2, 110, gymName.length > 14 ? 34 : 44, '#fff');
+  px(ctx, 'GRAPPLE QUEST TEAM', SIZE / 2, 168, 18, '#ffd700');
+  px(ctx, `${teamWins} TEAM WINS`, SIZE / 2, 212, 16, '#888');
+
+  // Members in rows of 4, sprites 144px
+  const shown = members.slice(0, 12);
+  const cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(shown.length))));
+  const cell = (SIZE - 200) / cols;
+  const spriteSize = Math.min(150, cell - 40);
+  for (let i = 0; i < shown.length; i++) {
+    const m = shown[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = 100 + col * cell + cell / 2;
+    const cy = 360 + row * (spriteSize + 64);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + spriteSize - 4, spriteSize / 3, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const img = m.sprite
+      ? await loadImg(`data:image/png;base64,${m.sprite}`)
+      : await loadImg(`/sprites/belt-${m.belt}.png`);
+    if (img) ctx.drawImage(img, cx - spriteSize / 2, cy, spriteSize, spriteSize);
+    px(ctx, m.name.toUpperCase().slice(0, 10), cx, cy + spriteSize + 22, 12, '#ddd');
+    px(ctx, m.belt.toUpperCase(), cx, cy + spriteSize + 44, 9, BELT_COLORS[m.belt] || '#888');
+  }
+  if (members.length > 12) {
+    px(ctx, `+${members.length - 12} MORE ON THE MAT`, SIZE / 2, 880, 12, '#888');
+  }
+
+  // Footer
+  px(ctx, `JOIN US — GRAPPLEQUEST.COM/G/${gymId.toUpperCase()}`, SIZE / 2, 1012, 14, '#ffd700');
+
+  return canvas;
 }

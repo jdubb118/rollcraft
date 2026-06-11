@@ -46,7 +46,9 @@ const clamp = (n: unknown, lo: number, hi: number): number => {
   return Math.max(lo, Math.min(hi, v));
 };
 
-export function createChallengeUrl(player: Grappler, record: { wins: number; losses: number }): string {
+/** Encoded build payload (the part after ?challenge=) — also stored on gym
+ * rosters so members are fightable as drop-in opponents. */
+export function encodeBuild(player: Grappler, record: { wins: number; losses: number }): string {
   const payload: ChallengePayload = {
     v: 1,
     n: player.name.slice(0, 12),
@@ -61,8 +63,11 @@ export function createChallengeUrl(player: Grappler, record: { wins: number; los
     m: player.moves.slice(0, BELT_MOVE_SLOTS[player.belt]),
     w: record.wins, l: record.losses,
   };
-  const encoded = b64urlEncode(JSON.stringify(payload));
-  return `${window.location.origin}/?challenge=${encoded}#/`;
+  return b64urlEncode(JSON.stringify(payload));
+}
+
+export function createChallengeUrl(player: Grappler, record: { wins: number; losses: number }): string {
+  return `${window.location.origin}/?challenge=${encodeBuild(player, record)}#/`;
 }
 
 /** Decode + harden a challenge string into a battle-ready Grappler. Null if invalid. */

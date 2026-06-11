@@ -13,6 +13,7 @@ import { shareCard } from '../engine/shareCard';
 import { createChallengeUrl } from '../engine/challenge';
 import { track, trackGymWin } from '../engine/analytics';
 import { getDailyRollState, recordDailyResult } from '../engine/daily';
+import { recordGymWinV2 } from '../engine/gyms';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 
@@ -158,7 +159,8 @@ export default function ResultScreen() {
       // don't let crafted names inflate npcDefeated (it gates region unlocks)
       const isChallenge = result.opponentId?.startsWith('challenge-');
       recordWin(isChallenge ? undefined : result.opponentName);
-      trackGymWin(player.gymName);
+      trackGymWin(player.gymName); // legacy string-keyed board
+      recordGymWinV2();            // id-keyed gym membership (no-op if unaffiliated)
     }
     else if (!isDraw) recordLoss();
     addMoney(moneyEarned);

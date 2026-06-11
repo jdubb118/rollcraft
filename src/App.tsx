@@ -14,12 +14,14 @@ import SettingsScreen from './screens/SettingsScreen'
 import AuthCallbackScreen from './screens/AuthCallbackScreen'
 import DevPanelScreen from './screens/DevPanelScreen'
 import GymsScreen from './screens/GymsScreen'
+import GymPageScreen from './screens/GymPageScreen'
 import { Navigate } from 'react-router-dom'
 import { preloadBeltSprites } from './render/BeltSprites'
 import { initAuth } from './engine/auth'
 import { wireCloudSave } from './engine/cloudSave'
 import { trackSession } from './engine/analytics'
 import { captureChallengeFromUrl } from './engine/challenge'
+import { captureGymFromUrl } from './engine/gyms'
 
 // Preload AI sprites on app start
 preloadBeltSprites();
@@ -29,8 +31,10 @@ wireCloudSave();
 initAuth();
 
 // First-party analytics + challenge-link capture (?challenge= before the hash)
+// + gym invite capture (grapplequest.com/g/<slug>)
 trackSession();
 captureChallengeFromUrl();
+captureGymFromUrl();
 
 export default function App() {
   return (
@@ -47,6 +51,7 @@ export default function App() {
       <Route path="/movedex" element={<MoveDexScreen />} />
       <Route path="/sprite-creator" element={<SpriteCreatorScreen />} />
       <Route path="/gyms" element={<GymsScreen />} />
+      <Route path="/gym" element={<GymPageScreen />} />
       <Route path="/settings" element={<SettingsScreen />} />
       <Route path="/auth/callback" element={<AuthCallbackScreen />} />
       <Route path="/dev" element={<DevPanelScreen />} />

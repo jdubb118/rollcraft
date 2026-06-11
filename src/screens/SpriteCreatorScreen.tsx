@@ -121,6 +121,7 @@ export default function SpriteCreatorScreen() {
     // Store custom sprite on player
     player.customSprite = spriteData;
     savePlayer(player);
+    import('../engine/gyms').then(({ syncGymMember }) => syncGymMember(player)); // roster shows the new look
     navigate('/overworld');
   }
 
