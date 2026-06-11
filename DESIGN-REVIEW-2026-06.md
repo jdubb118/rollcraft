@@ -307,3 +307,127 @@ text outlines, home-mat regen, BGM.
 Week 2: Daily Roll, gym wall, learn-by-getting-caught, key-moment splashes.
 Week 3: open mat days, rare encounters, top-control roll, pressure meter.
 Then: pilot at Academia, watch the buckets, season the leaderboard, NG+.
+
+---
+
+# Part 3 — The Identity Engine: photo → fighter, gym → world (viral architecture)
+
+The thesis: **in BJJ, the gym is the tribe and the belt is the identity.** People
+already share promotion photos, team photos, and gym merch — the game doesn't need
+to invent a sharing behavior, it needs to make pixel versions of rituals that
+already exist, at a quality level worth posting. The gym — not the player — is the
+viral unit: one founder seeds a gym, the gym's WhatsApp chat is the distribution
+channel, and every member's creation/promotion/trophy is a fresh share event that
+recruits the next member. That's a K-factor structure, not a share button.
+
+## The five shareable moments (each gets a designed card, square + 9:16 story)
+
+1. **"I'm in the game"** — creation card: your generated sprite, name, white belt,
+   gym crest. The day-0 share.
+2. **"My gym is in the game"** — founder card: the pixel gym map, name on the wall,
+   "Join us → grapplequest.com/g/academia-bjj". The seed share.
+3. **The evolution reveal** — promotion card: old sprite → new evolved sprite,
+   belt band, escalating aura. Promotions are already the most-posted event in
+   BJJ; this rides the existing ritual.
+4. **The team photo** — every member's sprite lined up on their own mat, belts
+   visible, gym name + logo + season banner. Team photos after promotions are a
+   real-world BJJ ritual; this is the highest-leverage card in the system.
+5. **Trophies** — tournament golds and Gym Wars banners on the gym page and
+   rendered on the gym's walls.
+
+Format note: story (1080×1920) matters more than feed — stories are low-stakes,
+high-frequency. Native share sheet → IG Story works from PWA on mobile.
+
+## A. The character: photo → evolving fighter
+
+- **Hybrid generation model (cost follows engagement):** 1 PixelLab gen at
+  creation (white-belt you). At each belt promotion, the NEXT evolution generates
+  live as part of the ceremony — same reference photo, belt-specific prompt
+  ("lean confident blue belt" → "elite zen black belt master"). Anticipation
+  ("what does my purple belt look like?") is itself a retention hook, and cost
+  concentrates on retained players (~1.5-2.5 gens average lifetime).
+- **Badass factor is mostly code, not gens:** keep 32px sprites in-game; on cards,
+  point-upscale 12× and stack programmatic FX per belt — white = clean, blue =
+  subtle glow, purple = particles, brown = smoke, black = full gold aura +
+  vignette + title text. Optional capstone: ONE hero-size (128px) "final form"
+  gen at black belt only.
+- Identity drift across evolutions is acceptable — evolution IS transformation —
+  as long as the same reference photo anchors hair/skin/build each time.
+- Evolutions never cost money and don't count against the device gen cap (they're
+  earned); server tracks per-account. Economics: ~1.5-2.5 gens/user lifetime —
+  fine under current bank for the pilot; move to PixelLab Pro tier at traction.
+
+## B. The gym: photo → playable map
+
+Three tiers, shipped in order:
+
+- **v1 — Palette kit (free, instant, every gym):** founder uploads a gym photo
+  (or picks colors) → client-side palette extraction → parameterized tile recolor
+  (mat color is THE gym identity marker), gym name rendered as wall signage,
+  uploaded logo as a wall banner, prop layout chosen from presets. Zero gen cost,
+  always playable, recognizably "theirs."
+- **v2 — Style transfer makeover (~3-4 gens/gym):** the gym photo becomes a
+  PixelLab style reference for mat/floor/wall surfaces composited into the proven
+  room template. Earned (gym hits N wins) or part of the B2B gym pack.
+- **v3 — Verified real gyms (B2B):** gym owners pay for the generated makeover +
+  verified badge + their gym featured on the map. This is the monetization that
+  doubles as a retention tool gyms buy for their own students.
+
+## C. How players join a gym (THE mechanism)
+
+Data: Supabase `gyms` (slug, name, founder, palette, logo, trophies, wins) +
+`gym_members` (gym_id, user_id/device_id, name, sprite, belt, wins). Player save
+carries gym_id; the existing string-keyed leaderboard keeps working for
+unaffiliated players, linked gyms aggregate by id.
+
+The join flow, friction-ranked:
+
+1. **Invite link** — `grapplequest.com/g/<slug>` opens the GYM PAGE: pixel map,
+   roster (every member's sprite + belt), trophy case, record. One button:
+   **JOIN THIS GYM.** New player → the create flow opens *already standing inside
+   that gym's pixel replica* — gym name pre-filled, the existing "you push open
+   the door to ___" cinematic now describes a real place they know. That moment
+   is the magic of the entire system. Existing player → join instantly
+   ("changing academies" allowed; past wins stay with the old gym).
+2. **QR poster** — auto-generated poster (pixel gym + QR + "Train at [gym] in
+   Grapple Quest") for the physical gym wall. The Academia pilot artifact.
+3. **Top Gyms board** — every leaderboard row becomes tappable → gym page → join.
+   The leaderboard turns into a recruitment surface.
+
+No signup wall: anonymous device-scoped membership joins instantly; Supabase auth
+upgrade only to protect/sync your spot. Gating joins behind accounts kills the
+K-factor at its strongest moment.
+
+**Drop-ins (async multiplayer, zero realtime infra):** visiting any gym page →
+"DROP IN" loads their map as a visitable region — roster members appear as NPCs
+fightable with their real builds (the challenge-link tech, server-stored). Beat
+someone on their own mat → it's logged in the gym's guest book. BJJ culture
+already calls this dropping in; the fiction is free.
+
+## D. Link unfurls
+
+Gym links shared into WhatsApp/IG must show THE gym, not generic art: pre-render
+a gym OG card (map + name + member count) to Supabase storage at create/update;
+a Netlify function at /g/:slug serves meta + redirects into the app.
+
+## E. Build phases
+
+- **V1 Identity Core (~3-4 days):** gyms + membership + invite links + gym page +
+  join-with-prefilled-creation; palette-kit custom maps; story-format cards;
+  founder card. ← the K-factor skeleton
+- **V2 Evolution (~2-3 days):** belt-evolution gens at promotion + reveal ceremony
+  + aura FX stack; team photo generator.
+- **V3 Drop-ins (~2-3 days):** visitable gyms, roster-as-NPCs, guest book, dynamic
+  gym OG unfurls, QR poster generator.
+- **V4 Pro (later):** style-transfer makeovers, verified gyms, B2B gym pack,
+  Gym Wars season integration.
+
+Risks: Supabase becomes load-bearing (needs RLS policies — well-trodden); gym
+name squatting (first-come slug + report button; verification solves it properly);
+PixelLab budget at scale (caps protect until Pro tier is justified); sprite
+moderation (32px abstraction is inherently low-risk; report button on gym pages).
+
+Sequencing vs Parts 1-2: combat Week 1 still goes first — viral growth pointed at
+a game with 53% dead turns wastes the traffic. Identity Engine V1 slots in as
+Week 2-3 alongside the retention layer, and the Academia pilot becomes the first
+real gym.
