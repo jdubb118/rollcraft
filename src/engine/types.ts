@@ -113,6 +113,7 @@ export interface BattleGrappler {
   maxStamina: number;
   isGassed: boolean;
   lastMoveId: string | null;
+  repeatCount: number;       // consecutive uses of the same move — opponent "reads" it
   momentum: number;          // 0-3, builds on consecutive successful moves
   flinched: boolean;         // forced to stall next turn (from impact move)
   setupBonus: {              // active buff from a grip/setup move
@@ -187,6 +188,7 @@ export interface BattleResult {
   turns: number;
   playerName: string;
   opponentName: string;
+  opponentId?: string;
   opponentStyle: Style;
   playerPoints?: number;
   opponentPoints?: number;

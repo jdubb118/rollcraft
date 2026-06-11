@@ -76,7 +76,9 @@ export const REGIONS: WorldRegion[] = [
       { type: 'stamp-count', value: 5, label: '5 stamps collected' },
     ],
     color: '#8e44ad',
-    tintColor: 'rgba(90,110,160,0.20)', ambientParticle: 'wavemist',
+    // Brightened from rgba(90,110,160,0.20) — the near-black painted surfaces
+    // plus a dark tint made the region unreadable. Lift, don't darken.
+    tintColor: 'rgba(170,190,225,0.10)', ambientParticle: 'wavemist',
   },
   {
     id: 'summit-city', name: 'Summit City',
@@ -98,6 +100,70 @@ export function getRegionAtmosphere(regionId: string): { tint?: string; particle
 
 export function getRegion(id: string): WorldRegion | undefined {
   return REGIONS.find(r => r.id === id);
+}
+
+// ── Next objective — the "what do I do now?" breadcrumb ──
+// Walks the region list in order and describes the first unmet gate with
+// live progress numbers. Promotion-readiness is handled by the caller
+// (it outranks region unlocks).
+export interface NextObjective {
+  title: string;
+  detail: string;
+}
+
+export function getNextObjective(
+  playerBelt: string,
+  stamps: string[],
+  tournamentWins: string[],
+  npcWins: number,
+): NextObjective | null {
+  const beltOrder = ['white', 'blue', 'purple', 'brown', 'black'];
+
+  for (const region of REGIONS) {
+    if (isRegionUnlocked(region.id, playerBelt, stamps, tournamentWins, npcWins)) continue;
+
+    const parts: string[] = [];
+    for (const req of region.unlockRequirements) {
+      switch (req.type) {
+        case 'belt': {
+          if (beltOrder.indexOf(playerBelt) < beltOrder.indexOf(req.value as string)) {
+            parts.push(`reach ${(req.value as string).toUpperCase()} belt`);
+          }
+          break;
+        }
+        case 'npc-wins': {
+          if (npcWins < (req.value as number)) {
+            parts.push(`beat training partners (${npcWins}/${req.value})`);
+          }
+          break;
+        }
+        case 'stamp-count': {
+          if (stamps.length < (req.value as number)) {
+            parts.push(`collect stamps (${stamps.length}/${req.value})`);
+          }
+          break;
+        }
+        case 'tournament-win': {
+          if (!tournamentWins.includes(req.value as string)) {
+            const names: Record<string, string> = {
+              'old-town-classic': 'win the Old Town Classic',
+              'scramble-open': 'win the Scramble Valley Open',
+            };
+            parts.push(names[req.value as string] || `win ${req.value}`);
+          }
+          break;
+        }
+      }
+    }
+    if (parts.length === 0) continue; // shouldn't happen, but don't show an empty goal
+    return { title: `UNLOCK ${region.name.toUpperCase()}`, detail: parts.join(' + ') };
+  }
+
+  // Everything unlocked — the endgame
+  if (!tournamentWins.includes('world-championship')) {
+    return { title: 'THE FINAL TEST', detail: 'Win the World Championship at Summit City' };
+  }
+  return { title: 'WORLD CHAMPION', detail: 'You did it. Run it back — or help a white belt.' };
 }
 
 export function isRegionUnlocked(

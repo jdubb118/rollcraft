@@ -7,6 +7,7 @@ import { savePlayer, saveOpponent } from '../state/saveLoad';
 import type { Grappler, Frame, Style } from '../engine/types';
 import { ARCHETYPES } from '../data/archetypes';
 import { RIVAL_NAME, RIVAL_STYLE_MAP } from '../data/storyArc';
+import { track } from '../engine/analytics';
 
 function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -65,6 +66,11 @@ export default function CreateScreen() {
 
   const coach = coachName.trim() || 'Coach';
   const gym = gymName.trim() || 'the gym';
+
+  // Funnel: creation flow opened
+  useEffect(() => {
+    if (!localStorage.getItem('rollcraft-show-aftermath')) track('create-started');
+  }, []);
 
   // Check if returning from onboarding battle
   useEffect(() => {
@@ -162,21 +168,27 @@ export default function CreateScreen() {
   }, [phase, textLine]);
 
   // ── Handlers ──
+  // Tap advances one line immediately (the pacing lives in the player's
+  // thumb, not a timer); when all lines are out, tap moves to the next phase.
   const handleTap = () => {
-    // Don't allow skipping cinematics — only proceed when text is done
-    if (phase === 'cinematic' && textLine >= cinematicLines.length) {
+    if (phase === 'cinematic') {
+      if (textLine < cinematicLines.length) { setTextLine(i => i + 1); return; }
       setPhase('choice');
     } else if (phase === 'training' && selectedPath !== null) {
       const path = STARTER_PATHS[selectedPath];
-      if (textLine >= path.narrative.length) setPhase('moves-unlocked');
+      if (textLine < path.narrative.length) { setTextLine(i => i + 1); return; }
+      setPhase('moves-unlocked');
     } else if (phase === 'rival-intro') {
-      // no skip — wait for button
-    } else if (phase === 'rival-aftermath' && textLine >= aftermathLines.length) {
+      // advance text on tap; the fight itself starts from the button
+      if (textLine < rivalIntroLines.length) setTextLine(i => i + 1);
+    } else if (phase === 'rival-aftermath') {
+      if (textLine < aftermathLines.length) { setTextLine(i => i + 1); return; }
       if (selectedPath !== null) {
         const path = STARTER_PATHS[selectedPath];
         const player = createPlayerGrappler(path, name.trim(), GI_COLORS[giColor].primary, gymName.trim(), coachName.trim());
         savePlayer(player);
         localStorage.setItem('rollcraft-story-rival-origin', 'true');
+        track('create-completed', path.style);
         navigate('/overworld');
       }
     }

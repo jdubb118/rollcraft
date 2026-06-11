@@ -1,12 +1,23 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loadPlayer, savePlayer } from '../state/saveLoad';
+import { track } from '../engine/analytics';
 
 type CreatorPhase = 'upload' | 'generating' | 'preview' | 'error';
+
+// Per-device generation budget — AI sprite gens cost real money, so each
+// device gets a handful. The server enforces a global monthly cap on top.
+const GEN_COUNT_KEY = 'rollcraft-sprite-gens-used';
+const DEVICE_GEN_CAP = 5;
+
+function getGensUsed(): number {
+  return parseInt(localStorage.getItem(GEN_COUNT_KEY) || '0', 10) || 0;
+}
 
 export default function SpriteCreatorScreen() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<CreatorPhase>('upload');
+  const [gensUsed, setGensUsed] = useState(getGensUsed());
   const [preview, setPreview] = useState<string | null>(null);
   const [spriteData, setSpriteData] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -15,7 +26,19 @@ export default function SpriteCreatorScreen() {
   if (!playerData) { navigate('/'); return null; }
   const player = playerData;
 
+  function consumeGen() {
+    const used = getGensUsed() + 1;
+    localStorage.setItem(GEN_COUNT_KEY, String(used));
+    setGensUsed(used);
+    track('sprite-gen');
+  }
+
   async function handlePhotoUpload(file: File) {
+    if (getGensUsed() >= DEVICE_GEN_CAP) {
+      setError(`You've used all ${DEVICE_GEN_CAP} sprite generations on this device.`);
+      setPhase('error');
+      return;
+    }
     setPhase('generating');
     setError('');
 
@@ -46,6 +69,7 @@ export default function SpriteCreatorScreen() {
 
       const data = await res.json();
       if (data.image) {
+        consumeGen();
         setSpriteData(data.image);
         setPhase('preview');
       } else {
@@ -59,6 +83,11 @@ export default function SpriteCreatorScreen() {
   }
 
   async function handleGenerateFromDescription() {
+    if (getGensUsed() >= DEVICE_GEN_CAP) {
+      setError(`You've used all ${DEVICE_GEN_CAP} sprite generations on this device.`);
+      setPhase('error');
+      return;
+    }
     setPhase('generating');
     setError('');
 
@@ -74,6 +103,7 @@ export default function SpriteCreatorScreen() {
 
       const data = await res.json();
       if (data.image) {
+        consumeGen();
         setSpriteData(data.image);
         setPhase('preview');
       } else {
@@ -108,6 +138,9 @@ export default function SpriteCreatorScreen() {
         <>
           <div style={{ fontSize: 'var(--fs-xs)', color: '#888', textAlign: 'center', lineHeight: 1.8 }}>
             Upload a photo of yourself to create<br/>a custom pixel art fighter!
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#555' }}>
+            {Math.max(0, DEVICE_GEN_CAP - gensUsed)}/{DEVICE_GEN_CAP} generations left
           </div>
 
           {/* Photo upload */}

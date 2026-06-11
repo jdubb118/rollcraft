@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadBattleResult, loadPlayer, savePlayer, recordWin, recordLoss, addMoney } from '../state/saveLoad';
+import { loadBattleResult, loadPlayer, savePlayer, recordWin, recordLoss, addMoney, loadProgression } from '../state/saveLoad';
 import { STYLE_NAMES } from '../engine/constants';
 import { BELT_XP_THRESHOLDS } from '../engine/types';
 import type { Belt, StatKey } from '../engine/types';
 import { getMoveXpGain, getMoveBonus, getMasteryLabel } from '../battle/moveXp';
+import { shareCard } from '../engine/shareCard';
+import { createChallengeUrl } from '../engine/challenge';
+import { track, trackGymWin } from '../engine/analytics';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 
@@ -67,6 +71,7 @@ export default function ResultScreen() {
   const navigate = useNavigate();
   const result = loadBattleResult();
   const player = loadPlayer();
+  const [shareState, setShareState] = useState<'idle' | 'working' | 'done' | 'copied'>('idle');
 
   if (!result || !player) {
     navigate('/');
@@ -109,7 +114,13 @@ export default function ResultScreen() {
     // Do NOT auto-promote — player must visit coach
     savePlayer(player);
 
-    if (isWin) recordWin(result.opponentName);
+    if (isWin) {
+      // Challenge opponents are untrusted URL builds — count the win, but
+      // don't let crafted names inflate npcDefeated (it gates region unlocks)
+      const isChallenge = result.opponentId?.startsWith('challenge-');
+      recordWin(isChallenge ? undefined : result.opponentName);
+      trackGymWin(player.gymName);
+    }
     else if (!isDraw) recordLoss();
     addMoney(moneyEarned);
 
@@ -243,6 +254,52 @@ export default function ResultScreen() {
           }}
         >
           BACK TO GYM
+        </button>
+
+        {isWin && (
+          <button
+            onClick={async () => {
+              if (shareState === 'working') return;
+              setShareState('working');
+              const prog = loadProgression();
+              await shareCard({
+                kind: 'victory',
+                player,
+                record: { wins: prog.totalWins + 1, losses: prog.totalLosses },
+                opponentName: result.opponentName,
+                method: result.method,
+              });
+              setShareState('done');
+            }}
+            style={{
+              padding: '10px', background: '#1a1a0e', color: '#ffd700',
+              fontSize: 'var(--fs-sm)', border: '2px solid #8b7500',
+            }}
+          >
+            {shareState === 'working' ? 'BUILDING CARD...' : shareState === 'done' ? '✓ CARD READY' : '📸 SHARE VICTORY CARD'}
+          </button>
+        )}
+
+        <button
+          onClick={async () => {
+            const prog = loadProgression();
+            const url = createChallengeUrl(player, {
+              wins: prog.totalWins + (isWin ? 1 : 0),
+              losses: prog.totalLosses + (!isWin && !isDraw ? 1 : 0),
+            });
+            track('challenge-created');
+            const text = `Think you can beat my fighter? ${url}`;
+            try {
+              if (navigator.share) { await navigator.share({ text }); setShareState('done'); return; }
+            } catch { /* user closed the sheet */ }
+            try { await navigator.clipboard.writeText(url); setShareState('copied'); } catch { /* ignore */ }
+          }}
+          style={{
+            padding: '8px', background: '#111', color: '#3498db',
+            fontSize: 'var(--fs-xs)', border: '1px solid #3498db',
+          }}
+        >
+          {shareState === 'copied' ? '✓ LINK COPIED' : '⚔ CHALLENGE A FRIEND'}
         </button>
       </div>
     </div>

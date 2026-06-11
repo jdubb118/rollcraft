@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Social share image source — screenshot at 1200×630 → public/og.png -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: 'Press Start 2P';
+    src: url('https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2') format('woff2');
+  }
+  * { margin: 0; padding: 0; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    font-family: 'Press Start 2P', monospace;
+    background: #0a0a14; position: relative;
+  }
+  .bg {
+    position: absolute; inset: 0;
+    background: url('../public/sprites/backgrounds/bg-summit-v2.png') center/cover;
+    image-rendering: pixelated;
+    filter: brightness(0.55) saturate(1.1);
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(10,10,20,0.1) 30%, rgba(10,10,20,0.92) 100%);
+  }
+  .frame {
+    position: absolute; inset: 26px;
+    border: 6px solid #ffd700;
+    box-shadow: inset 0 0 0 4px #0a0a14, inset 0 0 0 7px #8b6914;
+  }
+  .content {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding-top: 92px;
+  }
+  h1 {
+    font-size: 74px; color: #ffd700;
+    text-shadow: 6px 6px 0 #8b6914, 12px 12px 0 rgba(0,0,0,0.55);
+    letter-spacing: 8px;
+  }
+  .tagline {
+    margin-top: 34px; font-size: 26px; color: #fff;
+    text-shadow: 3px 3px 0 #000;
+    letter-spacing: 3px;
+  }
+  .sub {
+    margin-top: 26px; font-size: 17px; color: #9aa;
+    text-shadow: 2px 2px 0 #000;
+    letter-spacing: 2px; line-height: 1.9;
+  }
+  .fighters {
+    position: absolute; bottom: 64px; left: 0; right: 0;
+    display: flex; justify-content: center; align-items: flex-end; gap: 260px;
+  }
+  .fighters img {
+    width: 176px; height: 176px;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 14px 10px rgba(0,0,0,0.6));
+  }
+  .fighters img.flip { transform: scaleX(-1); }
+  .vs {
+    position: absolute; bottom: 128px; left: 50%; transform: translateX(-50%);
+    font-size: 34px; color: #ef4444; text-shadow: 4px 4px 0 #000;
+  }
+  .url {
+    position: absolute; bottom: 46px; left: 50%; transform: translateX(-50%);
+    font-size: 16px; color: #ffd700; text-shadow: 2px 2px 0 #000; letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="vignette"></div>
+  <div class="frame"></div>
+  <div class="content">
+    <h1>GRAPPLE QUEST</h1>
+    <div class="tagline">THE POKEMON-STYLE BJJ RPG</div>
+    <div class="sub">WHITE BELT → WORLD CHAMPION<br>150+ REAL TECHNIQUES · FREE IN YOUR BROWSER</div>
+  </div>
+  <div class="fighters">
+    <img src="../public/sprites/belt-black.png" alt="">
+    <img class="flip" src="../public/sprites/archetypes/wrestler-black.png" alt="">
+  </div>
+  <div class="vs">VS</div>
+  <div class="url">PLAY FREE — GRAPPLEQUEST.COM</div>
+</body>
+</html>

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { BattleState } from '../engine/types';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import { createBattleState, getPlayerMoves, executeTurn } from '../battle/BattleEngine';
-import { renderBattle, BATTLE_ANCHORS } from '../render/BattleRenderer';
+import { renderBattle, getBattleAnchors } from '../render/BattleRenderer';
+import { track } from '../engine/analytics';
 import type { BattleEffects } from '../render/BattleRenderer';
 import { getRole, getPositionDisplayName } from '../data/positions';
 import MovePanel from '../components/MovePanel';
@@ -80,10 +81,30 @@ function processBattleBeat(
   if (text.includes('Escaped') || text.includes('retained') || text.includes('Scrambled')) sfxEscape();
 }
 
+const TUTORIAL_KEY = 'rollcraft-battle-tutorial-seen';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'ONE MAT, ONE POSITION',
+    body: 'You and your opponent share a single position — watch the gold label. Your available moves change with it. Mount and back control are where you want to be.',
+  },
+  {
+    title: 'STAMINA IS LIFE',
+    body: 'Every move burns stamina (the big bar). Gas out and everything starts failing. STALL to recover — but the ref penalizes stalling, so pick your moments.',
+  },
+  {
+    title: 'WIN BY TAP OR POINTS',
+    body: 'Submissions end it instantly. Otherwise score: takedown +2, sweep +2, pass +3, mount/back +4. When the turns run out, points decide it.',
+  },
+];
+
 export default function BattleScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showScout, setShowScout] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<number>(() =>
+    localStorage.getItem(TUTORIAL_KEY) ? -1 : 0
+  );
   const [state, setState] = useState<BattleState | null>(null);
   const [animFrame, setAnimFrame] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
@@ -200,8 +221,10 @@ export default function BattleScreen() {
     if (splitIdx === 0) splitIdx = newLines.length;
 
     // firstActor attacks → target the defender. In phase 1 the defender is the opposite of firstActor.
-    const phase1Target = newState.firstActor === 'opponent' ? BATTLE_ANCHORS.playerCenter : BATTLE_ANCHORS.opponentCenter;
-    const phase2Target = newState.firstActor === 'opponent' ? BATTLE_ANCHORS.opponentCenter : BATTLE_ANCHORS.playerCenter;
+    // Anchors follow the live position layout so particles land on the actual fighters.
+    const anchors = getBattleAnchors(newState);
+    const phase1Target = newState.firstActor === 'opponent' ? anchors.playerCenter : anchors.opponentCenter;
+    const phase2Target = newState.firstActor === 'opponent' ? anchors.opponentCenter : anchors.playerCenter;
 
     // Phase 1: first actor's moves (immediate)
     const phase1 = { ...newState, log: [...state.log, ...newLines.slice(0, splitIdx)], phase: 'animating' as const };
@@ -227,10 +250,19 @@ export default function BattleScreen() {
       const beltMultiplier: Record<string, number> = { white: 1, blue: 1.5, purple: 2, brown: 2.5, black: 3 };
       const mult = beltMultiplier[newState.opponent.grappler.belt] || 1;
       const baseXp = isWin ? 100 + Math.floor(newState.turn * 2) : isDraw ? 50 : Math.floor(30 + newState.turn);
-      const xpGained = Math.floor(baseXp * mult);
+      // Challenge opponents come from untrusted URLs — flat XP so crafted
+      // max-belt links can't be farmed for progression.
+      const isChallengeOpp = newState.opponent.grappler.id.startsWith('challenge-');
+      const xpGained = isChallengeOpp ? Math.min(60, baseXp) : Math.floor(baseXp * mult);
 
       // Mark opponent as scouted (now you know their tendencies)
       markScouted(newState.opponent.grappler.name);
+
+      // Funnel analytics — onboarding battle vs regular, win/loss/draw
+      const isOnboardingBattle = !!localStorage.getItem('rollcraft-onboarding-battle');
+      const outcome = isWin ? 'win' : isDraw ? 'draw' : 'loss';
+      track('battle-result', isOnboardingBattle ? `first-${outcome}` : outcome);
+      if (newState.opponent.grappler.id.startsWith('challenge-')) track('challenge-accepted', outcome);
 
       // Check if this is a tournament match
       const activeTourneyId = localStorage.getItem('rollcraft-active-tourney-id');
@@ -243,6 +275,7 @@ export default function BattleScreen() {
         turns: newState.turn,
         playerName: newState.player.grappler.name,
         opponentName: newState.opponent.grappler.name,
+        opponentId: newState.opponent.grappler.id,
         opponentStyle: newState.opponent.grappler.style,
         playerPoints: newState.playerPoints,
         opponentPoints: newState.opponentPoints,
@@ -494,6 +527,59 @@ export default function BattleScreen() {
           </div>
         )}
       </div>
+
+      {/* First-battle tutorial — three taps, once ever */}
+      {tutorialStep >= 0 && tutorialStep < TUTORIAL_STEPS.length && (
+        <div
+          onClick={() => {
+            const next = tutorialStep + 1;
+            if (next >= TUTORIAL_STEPS.length) {
+              localStorage.setItem(TUTORIAL_KEY, 'true');
+              track('tutorial-seen');
+              setTutorialStep(-1);
+            } else {
+              setTutorialStep(next);
+            }
+          }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 60,
+            background: 'rgba(0,0,0,0.82)', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            padding: 28, gap: 16,
+          }}
+        >
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#666', letterSpacing: 2 }}>
+            HOW IT WORKS {tutorialStep + 1}/{TUTORIAL_STEPS.length}
+          </div>
+          <div style={{ fontSize: 'var(--fs-lg)', color: '#ffd700', textAlign: 'center' }}>
+            {TUTORIAL_STEPS[tutorialStep].title}
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-sm)', color: '#ccc', textAlign: 'center',
+            lineHeight: 1.9, maxWidth: 340,
+          }}>
+            {TUTORIAL_STEPS[tutorialStep].body}
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 12 }} className="blink">
+            TAP TO CONTINUE
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              localStorage.setItem(TUTORIAL_KEY, 'true');
+              track('tutorial-seen');
+              setTutorialStep(-1);
+            }}
+            style={{
+              marginTop: 4, padding: '6px 14px', background: 'transparent',
+              border: '1px solid #333', color: '#555', fontSize: 'var(--fs-xs)',
+            }}
+          >
+            SKIP
+          </button>
+        </div>
+      )}
 
       {/* Scout panel overlay — full screen over the game shell */}
       {showScout && (

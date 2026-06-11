@@ -9,6 +9,8 @@ import { getMove } from '../data/moves';
 import { loadProgression, useItem, savePlayer as saveP } from '../state/saveLoad';
 import { getItem } from '../data/items';
 import type { StatKey } from '../engine/types';
+import { createChallengeUrl } from '../engine/challenge';
+import { track } from '../engine/analytics';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 const BELT_COLORS: Record<Belt, string> = {
@@ -24,6 +26,7 @@ export default function StatsScreen() {
   const navigate = useNavigate();
   const [player, setPlayer] = useState(() => loadPlayer());
   const [tab, setTab] = useState<'stats' | 'moves' | 'items'>('stats');
+  const [challengeCopied, setChallengeCopied] = useState(false);
 
   if (!player) { navigate('/'); return null; }
   const p = player; // non-null after guard
@@ -212,6 +215,29 @@ export default function StatsScreen() {
                 <span>Mat Bucks: ${prog.money}</span>
               </div>
             </div>
+
+            {/* Challenge a friend */}
+            <button
+              onClick={async () => {
+                const url = createChallengeUrl(p, { wins: prog.totalWins, losses: prog.totalLosses });
+                track('challenge-created');
+                const text = `Think you can beat my fighter? ${url}`;
+                try {
+                  if (navigator.share) { await navigator.share({ text }); return; }
+                } catch { /* sheet closed */ }
+                try {
+                  await navigator.clipboard.writeText(url);
+                  setChallengeCopied(true);
+                  setTimeout(() => setChallengeCopied(false), 2500);
+                } catch { /* ignore */ }
+              }}
+              style={{
+                padding: '10px', background: '#0e1420', color: '#3498db',
+                fontSize: 'var(--fs-sm)', border: '2px solid #3498db',
+              }}
+            >
+              {challengeCopied ? '✓ LINK COPIED — SEND IT' : '⚔ CHALLENGE A FRIEND'}
+            </button>
           </>
         )}
 

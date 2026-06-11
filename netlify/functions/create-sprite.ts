@@ -2,7 +2,29 @@
  * Netlify Function: /api/create-sprite
  * Accepts a photo, sends to PixelLab API, returns pixel art sprite.
  * The API key is stored server-side — never exposed to the browser.
+ *
+ * Global monthly budget: PixelLab generations cost real credits, so the
+ * function refuses once the month's counter hits the cap. The client also
+ * enforces a per-device cap; this is the backstop against abuse.
  */
+import { getStore } from '@netlify/blobs';
+
+const MONTHLY_GEN_CAP = 250;
+
+async function checkAndCountGen(): Promise<boolean> {
+  try {
+    const store = getStore('sprite-gens');
+    const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const count = ((await store.get(monthKey, { type: 'json' })) ?? 0) as number;
+    if (count >= MONTHLY_GEN_CAP) return false;
+    await store.setJSON(monthKey, count + 1);
+    return true;
+  } catch {
+    // If the counter store is unreachable, fail open — a broken counter
+    // shouldn't kill the feature.
+    return true;
+  }
+}
 
 export default async function handler(req: Request): Promise<Response> {
   // CORS headers
@@ -34,6 +56,12 @@ export default async function handler(req: Request): Promise<Response> {
     if (!PIXELLAB_KEY) {
       return new Response(JSON.stringify({ error: 'API not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!(await checkAndCountGen())) {
+      return new Response(JSON.stringify({ error: 'Sprite generation is taking a breather this month — try again soon!' }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 

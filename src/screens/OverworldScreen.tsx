@@ -19,7 +19,8 @@ import { addItem } from '../state/saveLoad';
 import { Tile } from '../overworld/tiles';
 import { createParticleSystem, type ParticleSystem } from '../engine/particles';
 import { createAmbientState, tickAmbient, type AmbientState } from '../engine/ambientParticles';
-import { getRegionAtmosphere, REGIONS } from '../data/world';
+import { getRegionAtmosphere, getNextObjective, REGIONS } from '../data/world';
+import { getPendingChallenge, clearPendingChallenge } from '../engine/challenge';
 import { playRegionBGM } from '../engine/audio';
 import { preloadNPC } from '../render/NPCSprites';
 import { getRegionBG } from '../render/RegionBGs';
@@ -570,6 +571,23 @@ export default function OverworldScreen() {
         {/* UI tray — side panel on desktop, bottom sheet on mobile */}
         {(() => {
           const region = REGIONS.find(r => r.id === currentRegionId);
+
+          // "What now?" breadcrumb: promotion first, then the next locked region
+          const prog = loadProgression();
+          const beltIdx = BELTS.indexOf(player.belt);
+          const nb = beltIdx < BELTS.length - 1 ? BELTS[beltIdx + 1] : null;
+          const promotionReady = nb && player.xp >= BELT_XP_THRESHOLDS[nb];
+          const objective = promotionReady
+            ? { title: 'PROMOTION READY', detail: `See ${player.coachName || 'your coach'} at the Home Gym` }
+            : getNextObjective(
+                player.belt,
+                prog.stamps,
+                prog.tournamentResults.filter(r => r.placement === 'gold').map(r => r.tournamentId),
+                Object.keys(prog.npcDefeated).length,
+              );
+
+          const challenge = getPendingChallenge();
+
           return (
             <div className="ui-tray">
               <div style={{
@@ -591,6 +609,40 @@ export default function OverworldScreen() {
                   {region?.description || 'Where it all began.'}
                 </div>
               </div>
+
+              {objective && (
+                <div style={{
+                  marginTop: 8, padding: '10px 12px',
+                  background: '#11110a', border: '1px solid #3a3416', borderRadius: 8,
+                }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: '#ffd700', marginBottom: 4, letterSpacing: 1 }}>
+                    NEXT ▸ {objective.title}
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: '#998', lineHeight: 1.7 }}>
+                    {objective.detail}
+                  </div>
+                </div>
+              )}
+
+              {challenge && (
+                <button
+                  onClick={() => {
+                    saveOpponent(challenge.opponent);
+                    clearPendingChallenge();
+                    navigate('/battle');
+                  }}
+                  style={{
+                    marginTop: 8, padding: '10px 12px', textAlign: 'left',
+                    background: '#1a0e0e', border: '1px solid #ef4444', borderRadius: 8,
+                    color: '#ef4444', fontSize: 'var(--fs-xs)', lineHeight: 1.7,
+                  }}
+                  className="blink"
+                >
+                  ⚔ {challenge.opponent.name.toUpperCase()}
+                  {challenge.gym ? ` (${challenge.gym})` : ''} CHALLENGED YOU
+                  {challenge.record ? ` — ${challenge.record}` : ''}. TAP TO FIGHT!
+                </button>
+              )}
 
               <div style={{ flex: 1 }} />
 

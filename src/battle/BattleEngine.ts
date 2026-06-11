@@ -313,8 +313,21 @@ function executeMove(
     return;
   }
 
+  // ── REPEAT-MOVE READ ──
+  // Throwing the same attack over and over gets read — accuracy decays per
+  // consecutive repeat (chains of DIFFERENT moves still get their bonus).
+  if (attacker.lastMoveId === move.id) {
+    attacker.repeatCount = Math.min(3, attacker.repeatCount + 1);
+  } else {
+    attacker.repeatCount = 0;
+  }
+  const repeatPenalty = attacker.repeatCount * 7;
+  if (repeatPenalty > 0) {
+    state.log.push(`${defenderName} is reading the ${move.name}! (-${repeatPenalty} acc)`);
+  }
+
   // ── ACCURACY CHECK ──
-  let accuracy = move.accuracy + mastery.accuracyBonus;
+  let accuracy = move.accuracy + mastery.accuracyBonus - repeatPenalty;
   if (isChained(attacker.lastMoveId, move)) accuracy += 10;
   if (attacker.isGassed) accuracy -= 30;
   if (attacker.momentum >= 1) accuracy += attacker.momentum * 5;
@@ -478,6 +491,8 @@ function pickAIMove(state: BattleState): Move {
     if (move.category === 'setup') score += 25; // AI values setup moves
     if (!isAhead && turnsLeft <= 4 && (move.category === 'takedown' || move.category === 'sweep' || move.category === 'pass')) score += 25;
     if (isChained(state.opponent.lastMoveId, move)) score += 20;
+    // Avoid getting read — repeating the same move is increasingly bad
+    if (move.id === state.opponent.lastMoveId) score -= 12 * (state.opponent.repeatCount + 1);
     if (state.opponent.currentStamina < state.opponent.maxStamina * 0.3) score -= move.staminaCost * 2;
     score += (Math.random() - 0.5) * 30;
     return { move, score };

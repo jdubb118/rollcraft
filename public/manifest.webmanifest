@@ -1,0 +1,14 @@
+{
+  "name": "Grapple Quest — The BJJ Journey",
+  "short_name": "Grapple Quest",
+  "description": "The Pokémon-style BJJ RPG. White belt to World Champion.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a14",
+  "theme_color": "#0a0a14",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

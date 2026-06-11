@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadPlayer, savePlayer } from '../state/saveLoad';
+import { loadPlayer, savePlayer, loadProgression } from '../state/saveLoad';
 import type { Belt } from '../engine/types';
 import { BELT_MOVE_SLOTS } from '../engine/types';
 import { COACH_DIALOGUE } from '../data/storyArc';
 import { sfxBeltPromotion } from '../engine/sound';
+import { shareCard } from '../engine/shareCard';
+import { track } from '../engine/analytics';
 
 const BELTS: Belt[] = ['white', 'blue', 'purple', 'brown', 'black'];
 const BELT_COLORS: Record<Belt, string> = {
@@ -32,6 +34,7 @@ export default function PromotionScreen() {
   const [lineIndex, setLineIndex] = useState(0);
   const [phase, setPhase] = useState<'narrative' | 'reveal' | 'done'>('narrative');
   const [player] = useState(loadPlayer());
+  const [sharing, setSharing] = useState<'idle' | 'working' | 'done'>('idle');
   const navigate = useNavigate();
 
   if (!player) { navigate('/'); return null; }
@@ -62,11 +65,13 @@ export default function PromotionScreen() {
       setLineIndex(lines.length);
       setPhase('reveal');
     } else if (phase === 'reveal') {
-      setPhase('done');
-    } else {
-      // Apply promotion
+      // Apply the promotion as soon as it's revealed — the share card and
+      // the done screen should both show the NEW belt.
       player.belt = nextBelt;
       savePlayer(player);
+      track('promotion', nextBelt);
+      setPhase('done');
+    } else {
       navigate('/overworld');
     }
   };
@@ -148,7 +153,7 @@ export default function PromotionScreen() {
         </div>
       )}
 
-      {/* Done - confirmation */}
+      {/* Done - confirmation + share */}
       {phase === 'done' && (
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
@@ -162,6 +167,38 @@ export default function PromotionScreen() {
           }}>
             {player.name} is now a {nextBelt} belt.
           </div>
+
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (sharing === 'working') return;
+              setSharing('working');
+              const prog = loadProgression();
+              await shareCard({
+                kind: nextBelt === 'black' ? 'champion' : 'promotion',
+                player,
+                record: { wins: prog.totalWins, losses: prog.totalLosses },
+              });
+              setSharing('done');
+            }}
+            style={{
+              padding: '12px 24px', background: '#1a1a0e', color: '#ffd700',
+              fontSize: 'var(--fs-sm)', border: '2px solid #ffd700',
+            }}
+          >
+            {sharing === 'working' ? 'BUILDING CARD...' : sharing === 'done' ? '✓ CARD READY' : '📸 SHARE YOUR PROMOTION'}
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate('/sprite-creator'); }}
+            style={{
+              padding: '8px 16px', background: '#111', color: '#e91e63',
+              fontSize: 'var(--fs-xs)', border: '1px solid #e91e63',
+            }}
+          >
+            UPDATE YOUR FIGHTER ART
+          </button>
+
           <div style={{ fontSize: '0.3rem', color: '#444' }} className="blink">
             TAP TO RETURN TO GYM
           </div>

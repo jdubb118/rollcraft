@@ -1,5 +1,44 @@
 # Grapple Quest Changelog
 
+## v1.4.0 — Launch Readiness: Share, Compete, Measure (June 10, 2026)
+
+### Share Cards
+- Belt promotions and victories render a 1080×1080 pixel-art share card — your sprite, your name, your gym, your record — via native share sheet (download fallback)
+- Black belt promotion gets the WORLD CHAMPION card treatment
+- "UPDATE YOUR FIGHTER ART" shortcut on the promotion screen
+
+### Challenge Links
+- "⚔ CHALLENGE A FRIEND" (profile + post-match) serializes your fighter into a URL
+- Friends battle your build — decoded with full validation/clamping (anti-cheat), works with zero backend
+- Pending challenges surface on the title screen and overworld tray
+
+### Gym Leaderboard
+- Every win counts for your gym name — TOP GYMS board (world map button, /gyms)
+- Backed by Netlify Blobs, no accounts needed
+
+### Position-Driven Battle Visuals
+- Fighters now COMPOSE by mat position: supine bottom player, top player standing over/leaning, turtle piles, back-control stacks, leg-entanglement feet-to-feet
+- Winner stands over the beaten opponent at match end
+- Ground shadows under both fighters; particle FX anchors follow the live layout
+- Stamina is now the hero HUD bar (it decides matches); HP demoted to a slim strip; GASSED! indicator
+
+### Balance
+- Repeat-move read: spamming the same technique loses 7 accuracy per consecutive repeat (max -21) — "They're reading the armbar!" Chains of different moves still get their bonus
+- AI avoids getting read the same way
+- Move panel now shows ALL legal moves (was silently capped at 4)
+- Iron Coast region tint lifted — was unreadably dark
+
+### Onboarding
+- All cinematics are tap-to-advance (timers remain as fallback) — no more forced waits
+- First-battle tutorial: 3 taps covering position/stamina/scoring, once ever, skippable
+- "NEXT ▸" objective breadcrumb on the overworld — always know your next gate, with live progress (e.g. "beat training partners (1/2)")
+
+### Growth Infrastructure
+- First-party analytics: daily event counters via Netlify Blobs (sessions, funnel, retention buckets, shares) — /api/track, /api/stats. No cookies, no PII
+- Full OG/Twitter/JSON-LD meta + 1200×630 share image — links finally unfurl
+- PWA manifest + icons (installable, standalone)
+- Sprite generation caps: 5 per device + global monthly budget (PixelLab credits cost real money)
+
 ## v1.2.0 — AI Sprites + Polish (April 9, 2026)
 
 ### AI-Generated Sprites (PixelLab Integration)

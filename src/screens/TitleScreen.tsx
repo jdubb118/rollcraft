@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { hasExistingPlayer } from '../state/saveLoad';
+import { hasExistingPlayer, saveOpponent } from '../state/saveLoad';
+import { getPendingChallenge, clearPendingChallenge } from '../engine/challenge';
 
 export default function TitleScreen() {
   const navigate = useNavigate();
   const hasSave = hasExistingPlayer();
+  const challenge = getPendingChallenge();
 
   return (
     <div className="game-shell" style={{
@@ -32,6 +34,39 @@ export default function TitleScreen() {
           background: 'linear-gradient(90deg, #fff, #e0e0e0, #fff)',
         }} />
       </div>
+
+      {/* Incoming challenge */}
+      {challenge && (
+        <div style={{
+          padding: '12px 16px', maxWidth: 300, textAlign: 'center',
+          background: '#1a0e0e', border: '2px solid #ef4444',
+        }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: '#ef4444', lineHeight: 1.8, marginBottom: 10 }}>
+            ⚔ {challenge.opponent.name.toUpperCase()}
+            {challenge.gym ? ` FROM ${challenge.gym.toUpperCase()}` : ''} CHALLENGES YOU
+            {challenge.record ? ` (${challenge.record})` : ''}
+          </div>
+          {hasSave ? (
+            <button
+              onClick={() => {
+                saveOpponent(challenge.opponent);
+                clearPendingChallenge();
+                navigate('/battle');
+              }}
+              style={{
+                padding: '10px 24px', background: '#ef4444', color: '#fff',
+                fontSize: 'var(--fs-sm)', border: 'none',
+              }}
+            >
+              ACCEPT
+            </button>
+          ) : (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#888', lineHeight: 1.7 }}>
+              Create your fighter first — the challenge will be waiting.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Menu buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

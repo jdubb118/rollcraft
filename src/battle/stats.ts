@@ -76,6 +76,7 @@ export function createBattleGrappler(grappler: Grappler) {
     maxStamina,
     isGassed: false,
     lastMoveId: null as string | null,
+    repeatCount: 0,
     momentum: 0,
     flinched: false,
     setupBonus: null,

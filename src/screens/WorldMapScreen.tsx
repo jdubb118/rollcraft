@@ -89,9 +89,20 @@ export default function WorldMapScreen() {
           BACK
         </button>
         <span style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }}>WORLD MAP</span>
-        <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
-          {progression.stamps.length}/{REGIONS.filter(r => r.stampId).length} STAMPS | ${progression.money}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => navigate('/gyms')}
+            style={{
+              padding: '4px 8px', background: '#1a1a2e', color: '#22c55e',
+              fontSize: 'var(--fs-xs)', border: '1px solid #22c55e',
+            }}
+          >
+            TOP GYMS
+          </button>
+          <span style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
+            {progression.stamps.length}/{REGIONS.filter(r => r.stampId).length} STAMPS | ${progression.money}
+          </span>
+        </div>
       </div>
 
       {/* Map area */}

@@ -15,19 +15,21 @@ export default function MovePanel({ moves, onSelect, disabled, currentStamina }:
   const stallMove = moves.find(m => m.id === '__stall__');
 
   // Pad regular moves to fill 2x2 grid if needed
-  const slots = [...regularMoves];
-  while (slots.length < 3 && slots.length > 0) slots.push(null as any);
+  const slots: (Move | null)[] = [...regularMoves];
+  while (slots.length < 3 && slots.length > 0) slots.push(null);
 
   return (
     <div style={{ padding: '0 8px', width: '100%', maxWidth: 400, margin: '0 auto' }}>
-      {/* Regular moves — 2-column grid */}
-      <div style={{
+      {/* Regular moves — 2-column grid, scrolls when more than 4 are legal */}
+      <div className="no-scrollbar" style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gap: 6,
         marginBottom: hasStall ? 6 : 0,
+        maxHeight: 124,
+        overflowY: slots.length > 4 ? 'auto' : 'visible',
       }}>
-        {slots.slice(0, 4).map((move, i) =>
+        {slots.map((move, i) =>
           move ? (
             <MoveButton
               key={move.id}

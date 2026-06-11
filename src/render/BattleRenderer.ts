@@ -1,5 +1,5 @@
 import type { BattleState } from '../engine/types';
-import { getGrapplerSprite, getPlayerSprite, SPRITE_W, SPRITE_H } from './SpriteData';
+import { getGrapplerSprite, getPlayerSprite } from './SpriteData';
 import { getBeltSprite, getCustomSprite } from './BeltSprites';
 
 // Battle background images per region. v2 paths are tried first, then v1 (for graceful rollout).
@@ -121,6 +121,93 @@ export interface BattleEffects {
   flashAlpha?: number; // 0-1
 }
 
+// ── Position-driven fighter composition ──
+// Each mat position maps to two poses (sprite CENTERS in canvas space).
+// rot is radians; a supine fighter is rotated ±90°. flipX mirrors the sprite.
+interface FighterPose { x: number; y: number; rot: number; flipX: boolean }
+interface BattleLayout { player: FighterPose; opponent: FighterPose; drawPlayerFirst: boolean }
+
+const HALF_PI = Math.PI / 2;
+
+// Poses keyed by role for asymmetric positions. Stage is roughly x 80-240, y 85-150
+// (clear of the HUD bars top-left and bottom-right).
+const GROUND_LAYOUTS: Record<string, { top: Omit<FighterPose, 'flipX'>; bottom: Omit<FighterPose, 'flipX'>; topBehind?: boolean }> = {
+  'closed-guard':   { top: { x: 188, y: 112, rot: 0 },          bottom: { x: 142, y: 138, rot: -HALF_PI } },
+  'open-guard':     { top: { x: 200, y: 110, rot: 0 },          bottom: { x: 136, y: 138, rot: -HALF_PI } },
+  'half-guard':     { top: { x: 180, y: 116, rot: 0.18 },       bottom: { x: 146, y: 138, rot: -HALF_PI } },
+  'side-control':   { top: { x: 152, y: 116, rot: -HALF_PI + 0.5 }, bottom: { x: 160, y: 140, rot: -HALF_PI } },
+  'mount':          { top: { x: 160, y: 103, rot: 0 },          bottom: { x: 160, y: 140, rot: -HALF_PI } },
+  'back-control':   { top: { x: 146, y: 110, rot: 0.12 },       bottom: { x: 168, y: 120, rot: 0.35 }, topBehind: true },
+  'turtle':         { top: { x: 166, y: 106, rot: 0.25 },       bottom: { x: 152, y: 142, rot: -HALF_PI } },
+  'knee-on-belly':  { top: { x: 178, y: 108, rot: 0 },          bottom: { x: 148, y: 140, rot: -HALF_PI } },
+  'north-south':    { top: { x: 160, y: 112, rot: HALF_PI },    bottom: { x: 160, y: 142, rot: -HALF_PI } },
+};
+
+function getPositionLayout(state: BattleState): BattleLayout {
+  // Battle over → winner stands over the beaten opponent
+  if (state.phase === 'battle-over' && state.winner) {
+    const winnerPose: FighterPose = { x: 160, y: 104, rot: 0, flipX: state.winner === 'opponent' };
+    const loserPose: FighterPose = { x: 160, y: 142, rot: -HALF_PI, flipX: state.winner === 'player' };
+    return state.winner === 'player'
+      ? { player: winnerPose, opponent: loserPose, drawPlayerFirst: false }
+      : { player: loserPose, opponent: winnerPose, drawPlayerFirst: true };
+  }
+
+  // Symmetric positions — squared-up neutral stances
+  if (state.position === 'standing') {
+    return {
+      player:   { x: 95,  y: 122, rot: 0, flipX: false },
+      opponent: { x: 225, y: 102, rot: 0, flipX: true },
+      drawPlayerFirst: false,
+    };
+  }
+  if (state.position === 'clinch') {
+    return {
+      player:   { x: 134, y: 116, rot: 0, flipX: false },
+      opponent: { x: 186, y: 108, rot: 0, flipX: true },
+      drawPlayerFirst: false,
+    };
+  }
+  if (state.position === 'leg-entanglement') {
+    return {
+      player:   { x: 116, y: 134, rot: HALF_PI, flipX: false },
+      opponent: { x: 204, y: 134, rot: -HALF_PI, flipX: true },
+      drawPlayerFirst: false,
+    };
+  }
+
+  // Asymmetric ground positions
+  const ground = GROUND_LAYOUTS[state.position];
+  if (!ground || !state.topFighter) {
+    // Unknown — fall back to the standing arrangement
+    return {
+      player:   { x: 95,  y: 122, rot: 0, flipX: false },
+      opponent: { x: 225, y: 102, rot: 0, flipX: true },
+      drawPlayerFirst: false,
+    };
+  }
+
+  const playerIsTop = state.topFighter === 'player';
+  const playerPose: FighterPose = { ...(playerIsTop ? ground.top : ground.bottom), flipX: false };
+  const opponentPose: FighterPose = { ...(playerIsTop ? ground.bottom : ground.top), flipX: true };
+  // Bottom fighter draws first (underneath) — unless topBehind flips it
+  const topDrawsLast = !ground.topBehind;
+  const drawPlayerFirst = topDrawsLast ? !playerIsTop : playerIsTop;
+  return { player: playerPose, opponent: opponentPose, drawPlayerFirst };
+}
+
+/** Live particle/FX anchors that follow the position layout. */
+export function getBattleAnchors(state: BattleState): { playerCenter: { x: number; y: number }; opponentCenter: { x: number; y: number }; midpoint: { x: number; y: number } } {
+  const layout = getPositionLayout(state);
+  const playerCenter = { x: layout.player.x, y: layout.player.y };
+  const opponentCenter = { x: layout.opponent.x, y: layout.opponent.y };
+  return {
+    playerCenter,
+    opponentCenter,
+    midpoint: { x: (playerCenter.x + opponentCenter.x) / 2, y: (playerCenter.y + opponentCenter.y) / 2 },
+  };
+}
+
 export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, animFrame: number, regionId?: string, effects?: BattleEffects) {
   ctx.save();
   const sx = effects?.shakeX ?? 0;
@@ -147,43 +234,20 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   const scale = 4;
   const idle = animFrame === 0;
 
-  // Draw opponent (top-right, facing left)
-  // Priority chain:
-  //   1. named NPC sprite (id registered like 'tp-keenan')
-  //   2. archetype sprite keyed by (style × belt) — covers random encounters
-  //   3. programmatic fallback (last resort if nothing loads)
+  // ── Resolve sprites ──
+  // Opponent priority: named NPC sprite → archetype (style × belt) → programmatic
   const oppId = state.opponent.grappler.id;
-  const isNamedNPC = oppId && !oppId.startsWith('random-');
-  const opponentAiSprite =
+  const isNamedNPC = oppId && !oppId.startsWith('random-') && !oppId.startsWith('challenge-');
+  const opponentSprite: HTMLCanvasElement | HTMLImageElement =
     (isNamedNPC ? getNPCSprite(oppId!, 'down') : null) ??
-    getArchetypeSprite(state.opponent.grappler.style, state.opponent.grappler.belt);
-  const opProgSprite = getGrapplerSprite(state.opponent.grappler.style, scale, state.opponent.grappler.belt);
-  const opX = CANVAS_WIDTH - 80 - SPRITE_W * scale;
-  const opY = 60;
-  const opBreath = idle ? idleBreath(1.5) : 0;
-  ctx.save();
-  ctx.translate(opX + SPRITE_W * scale, opY + opBreath);
-  ctx.scale(-1, 1);
-  // Shake opponent on hit
-  if (animFrame > 0 && animFrame < 4) {
-    ctx.translate(Math.sin(animFrame * 5) * 3, 0);
-  }
-  if (opponentAiSprite) {
-    // AI sprite is 32x32, draw at 2x to match player-scale on the other side
-    const aiScale = 2;
-    ctx.drawImage(opponentAiSprite, 0, 0, 32 * aiScale, 32 * aiScale);
-  } else {
-    ctx.drawImage(opProgSprite, 0, 0);
-  }
-  ctx.restore();
+    getArchetypeSprite(state.opponent.grappler.style, state.opponent.grappler.belt) ??
+    getGrapplerSprite(state.opponent.grappler.style, scale, state.opponent.grappler.belt);
 
-  // Draw player (bottom-left, facing right)
-  // Priority: custom sprite > belt evolution sprite > programmatic sprite
+  // Player priority: custom sprite → belt evolution sprite → programmatic
   const customSpriteData = state.player.grappler.customSprite;
   const beltImg = customSpriteData
     ? getCustomSprite(customSpriteData)
     : getBeltSprite(state.player.grappler.belt);
-
   let playerSprite: HTMLCanvasElement | HTMLImageElement;
   if (beltImg) {
     playerSprite = beltImg;
@@ -193,16 +257,41 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
       ? getPlayerSprite(playerGi, scale, state.player.grappler.belt)
       : getGrapplerSprite(state.player.grappler.style, scale, state.player.grappler.belt);
   }
-  const plX = 80;
+
+  // ── Position-driven composition ──
+  // The mat position decides where the two fighters are and how they lie.
+  // Bottom fighter in ground positions is drawn rotated (supine); the top
+  // fighter stays upright or leans over them. The fight is WATCHED now,
+  // not just read off the log.
+  const layout = getPositionLayout(state);
   const plBreath = idle ? idleBreath(0) : 0;
-  if (beltImg) {
-    // AI sprite is 32x32, draw at 2x to match canvas scale (~64px)
-    const aiScale = 2;
-    const plY = CANVAS_HEIGHT - 60 - 32 * aiScale;
-    ctx.drawImage(playerSprite, plX, plY + plBreath, 32 * aiScale, 32 * aiScale);
-  } else {
-    const plY = CANVAS_HEIGHT - 60 - SPRITE_H * scale;
-    ctx.drawImage(playerSprite, plX, plY + plBreath);
+  const opBreath = idle ? idleBreath(1.5) : 0;
+  const attackJitter = animFrame > 0 && animFrame < 4 ? Math.sin(animFrame * 5) * 3 : 0;
+
+  const drawOrder: ('player' | 'opponent')[] = layout.drawPlayerFirst
+    ? ['player', 'opponent'] : ['opponent', 'player'];
+
+  for (const who of drawOrder) {
+    const pose = who === 'player' ? layout.player : layout.opponent;
+    const sprite = who === 'player' ? playerSprite : opponentSprite;
+    const breath = who === 'player' ? plBreath : opBreath;
+    const jitter = who === 'opponent' ? attackJitter : 0;
+
+    // Ground shadow
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.beginPath();
+    const shadowY = pose.rot !== 0 ? pose.y + 20 : pose.y + 28;
+    ctx.ellipse(pose.x, shadowY, pose.rot !== 0 ? 30 : 18, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(pose.x + jitter, pose.y + breath);
+    if (pose.rot !== 0) ctx.rotate(pose.rot);
+    if (pose.flipX) ctx.scale(-1, 1);
+    ctx.drawImage(sprite, -32, -32, 64, 64);
+    ctx.restore();
   }
 
   // Hit flash — event-typed colour takes precedence, fallback to plain white during attack anim
@@ -219,27 +308,29 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
 
-  // ── Opponent HUD ──
+  // ── Opponent HUD — stamina is the hero bar (it decides BJJ matches), HP is secondary ──
   drawPixelText(ctx, state.opponent.grappler.name.substring(0, 12).toUpperCase(), 10, 6, 8, '#fff');
   drawPixelText(ctx, `Lv${getLevel(state.opponent.grappler)}`, CANVAS_WIDTH - 50, 6, 7, '#aaa');
   const opHpColor = getHpColor(state.opponent.currentHp, state.opponent.stats.maxHp);
   const opStaColor = getStaminaColor(state.opponent.currentStamina, state.opponent.maxStamina);
-  drawBar(ctx, 10, 20, 140, 9, state.opponent.currentHp, state.opponent.stats.maxHp, opHpColor, '#222', 'HP');
-  drawBar(ctx, 10, 32, 140, 7, state.opponent.currentStamina, state.opponent.maxStamina, opStaColor, '#222', 'STA');
+  drawBar(ctx, 10, 20, 140, 10, state.opponent.currentStamina, state.opponent.maxStamina, opStaColor, '#222', 'STA');
+  drawBar(ctx, 10, 33, 140, 5, state.opponent.currentHp, state.opponent.stats.maxHp, opHpColor, '#222');
+  if (state.opponent.isGassed) drawPixelText(ctx, 'GASSED!', 155, 21, 7, '#ef4444');
 
   // Momentum indicator for opponent
-  if (state.opponent.momentum > 0) {
+  if (state.opponent.momentum > 0 && !state.opponent.isGassed) {
     const momText = '🔥'.repeat(state.opponent.momentum);
     drawPixelText(ctx, momText, 155, 20, 7, '#ff9800');
   }
 
-  // ── Player HUD ──
+  // ── Player HUD — stamina hero bar ──
   drawPixelText(ctx, state.player.grappler.name.substring(0, 12).toUpperCase(), CANVAS_WIDTH - 155, CANVAS_HEIGHT - 48, 8, '#fff');
   drawPixelText(ctx, `Lv${getLevel(state.player.grappler)}`, CANVAS_WIDTH - 50, CANVAS_HEIGHT - 48, 7, '#aaa');
   const plHpColor = getHpColor(state.player.currentHp, state.player.stats.maxHp);
   const plStaColor = getStaminaColor(state.player.currentStamina, state.player.maxStamina);
-  drawBar(ctx, CANVAS_WIDTH - 155, CANVAS_HEIGHT - 33, 140, 9, state.player.currentHp, state.player.stats.maxHp, plHpColor, '#222', 'HP');
-  drawBar(ctx, CANVAS_WIDTH - 155, CANVAS_HEIGHT - 21, 140, 7, state.player.currentStamina, state.player.maxStamina, plStaColor, '#222', 'STA');
+  drawBar(ctx, CANVAS_WIDTH - 155, CANVAS_HEIGHT - 33, 140, 10, state.player.currentStamina, state.player.maxStamina, plStaColor, '#222', 'STA');
+  drawBar(ctx, CANVAS_WIDTH - 155, CANVAS_HEIGHT - 20, 140, 5, state.player.currentHp, state.player.stats.maxHp, plHpColor, '#222');
+  if (state.player.isGassed) drawPixelText(ctx, 'GASSED!', CANVAS_WIDTH - 155, CANVAS_HEIGHT - 42, 7, '#ef4444');
 
   // Momentum indicator for player
   if (state.player.momentum > 0) {
@@ -251,15 +342,16 @@ export function renderBattle(ctx: CanvasRenderingContext2D, state: BattleState, 
   const playerRole = getRole(state.position, state.topFighter, 'player');
   const posDisplay = getPositionDisplayName(state.position, playerRole);
   ctx.textAlign = 'center';
-  drawPixelText(ctx, posDisplay.toUpperCase(), CANVAS_WIDTH / 2 - posDisplay.length * 3, CANVAS_HEIGHT / 2 + 50, 7, '#ffd700');
+  drawPixelText(ctx, posDisplay.toUpperCase(), CANVAS_WIDTH / 2 - posDisplay.length * 3, CANVAS_HEIGHT / 2 + 58, 7, '#ffd700');
   ctx.textAlign = 'start';
 
   ctx.restore();
 }
 
-// Target points in canvas space — used to spawn particles at the "action" area.
+// Static fallback anchors — prefer getBattleAnchors(state), which follows
+// the live position layout.
 export const BATTLE_ANCHORS = {
-  opponentCenter: { x: CANVAS_WIDTH - 80 - 16, y: 60 + 32 }, // halfway across a 32-px-drawn sprite
-  playerCenter:   { x: 80 + 16,                 y: CANVAS_HEIGHT - 60 - 32 },
-  midpoint:       { x: CANVAS_WIDTH / 2,        y: CANVAS_HEIGHT / 2 + 10 },
+  opponentCenter: { x: 225, y: 102 },
+  playerCenter:   { x: 95,  y: 122 },
+  midpoint:       { x: 160, y: 120 },
 };
