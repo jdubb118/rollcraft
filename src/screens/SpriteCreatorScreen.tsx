@@ -1,177 +1,70 @@
+/**
+ * The Character Forge (re-roll surface) — identity creation lives in
+ * onboarding; this screen re-forges your fighter from a new photo.
+ * Generation runs in the background; the reveal fires on the overworld.
+ */
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadPlayer, savePlayer } from '../state/saveLoad';
-import { track } from '../engine/analytics';
-
-type CreatorPhase = 'upload' | 'generating' | 'preview' | 'error';
-
-// Per-device generation budget — AI sprite gens cost real money, so each
-// device gets a handful. The server enforces a global monthly cap on top.
-const GEN_COUNT_KEY = 'rollcraft-sprite-gens-used';
-const DEVICE_GEN_CAP = 5;
-
-function getGensUsed(): number {
-  return parseInt(localStorage.getItem(GEN_COUNT_KEY) || '0', 10) || 0;
-}
+import { loadPlayer } from '../state/saveLoad';
+import { fileToSquarePng, startCharacterForge, getPendingCharacterJob } from '../engine/characters';
 
 export default function SpriteCreatorScreen() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<CreatorPhase>('upload');
-  const [gensUsed, setGensUsed] = useState(getGensUsed());
-  const [preview, setPreview] = useState<string | null>(null);
-  const [spriteData, setSpriteData] = useState<string | null>(null);
-  const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [phase, setPhase] = useState<'idle' | 'working' | 'started' | 'error'>(
+    getPendingCharacterJob() ? 'started' : 'idle'
+  );
+  const [error, setError] = useState('');
   const playerData = loadPlayer();
   if (!playerData) { navigate('/'); return null; }
   const player = playerData;
 
-  function consumeGen() {
-    const used = getGensUsed() + 1;
-    localStorage.setItem(GEN_COUNT_KEY, String(used));
-    setGensUsed(used);
-    track('sprite-gen');
-  }
-
-  // Center-crop + resize any upload to a 256×256 PNG — the API requires a
-  // known input size, and this kills multi-MB uploads + EXIF surprises.
-  async function photoTo256(file: File): Promise<string> {
-    const url = URL.createObjectURL(file);
-    try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const i = new Image();
-        i.onload = () => resolve(i);
-        i.onerror = reject;
-        i.src = url;
-      });
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d')!;
-      const side = Math.min(img.width, img.height);
-      const sx = (img.width - side) / 2;
-      // bias crop toward the top — faces live there in portraits
-      const sy = Math.max(0, (img.height - side) / 4);
-      ctx.drawImage(img, sx, sy, side, side, 0, 0, 256, 256);
-      return canvas.toDataURL('image/png').split(',')[1];
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  }
-
-  async function handlePhotoUpload(file: File) {
-    if (getGensUsed() >= DEVICE_GEN_CAP) {
-      setError(`You've used all ${DEVICE_GEN_CAP} sprite generations on this device.`);
-      setPhase('error');
-      return;
-    }
-    setPhase('generating');
+  async function handlePhoto(file: File) {
+    setPhase('working');
     setError('');
-
     try {
-      const base64 = await photoTo256(file);
-
-      // Show uploaded photo as preview
-      setPreview(`data:image/png;base64,${base64}`);
-
-      // Call our Netlify function
-      const res = await fetch('/api/create-sprite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          photo: base64,
-          description: `${player.name} BJJ fighter in ${player.giColor === '#e8e8e0' ? 'white' : player.giColor === '#2563eb' ? 'blue' : 'black'} gi, ${player.belt} belt, standing fighting stance, front facing, full body, pixel art game character sprite`,
-          size: 32,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.image) {
-        consumeGen();
-        setSpriteData(data.image);
-        setPhase('preview');
-      } else {
-        setError(data.error || 'Failed to generate sprite');
-        setPhase('error');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Network error');
+      const b64 = await fileToSquarePng(file, 512);
+      const r = await startCharacterForge(b64, player.giColor);
+      if (!r.ok) { setError(r.error); setPhase('error'); return; }
+      setPhase('started');
+    } catch {
+      setError('Could not read that photo. Try another.');
       setPhase('error');
     }
-  }
-
-  async function handleGenerateFromDescription() {
-    if (getGensUsed() >= DEVICE_GEN_CAP) {
-      setError(`You've used all ${DEVICE_GEN_CAP} sprite generations on this device.`);
-      setPhase('error');
-      return;
-    }
-    setPhase('generating');
-    setError('');
-
-    try {
-      const res = await fetch('/api/create-sprite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          belt: player.belt,
-          size: 32,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.image) {
-        consumeGen();
-        setSpriteData(data.image);
-        setPhase('preview');
-      } else {
-        setError(data.error || 'Failed to generate sprite');
-        setPhase('error');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Network error');
-      setPhase('error');
-    }
-  }
-
-  function handleSaveSprite() {
-    if (!spriteData || !player) return;
-    // Store custom sprite on player
-    player.customSprite = spriteData;
-    savePlayer(player);
-    import('../engine/gyms').then(({ syncGymMember }) => syncGymMember(player)); // roster shows the new look
-    navigate('/overworld');
   }
 
   return (
     <div className="game-shell" style={{
       justifyContent: 'center', alignItems: 'center', gap: 16, padding: 24,
     }}>
-      {/* Header */}
       <div style={{ fontSize: 'var(--fs-lg)', color: '#ffd700', textAlign: 'center' }}>
-        CREATE YOUR SPRITE
+        THE CHARACTER FORGE
       </div>
 
-      {/* Upload phase */}
-      {phase === 'upload' && (
+      {/* Current fighter */}
+      {player.customSprites?.south && phase === 'idle' && (
+        <img
+          src={`data:image/png;base64,${player.customSprites.south}`}
+          alt="current fighter"
+          style={{ width: 96, height: 96, imageRendering: 'pixelated', border: '2px solid #333' }}
+        />
+      )}
+
+      {(phase === 'idle' || phase === 'error') && (
         <>
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#888', textAlign: 'center', lineHeight: 1.8 }}>
-            Upload a photo of yourself to create<br/>a custom pixel art fighter!
-          </div>
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#555' }}>
-            {Math.max(0, DEVICE_GEN_CAP - gensUsed)}/{DEVICE_GEN_CAP} generations left
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#888', textAlign: 'center', lineHeight: 1.8, maxWidth: 300 }}>
+            {player.customSprites
+              ? 'Re-forge your fighter from a new photo. The old one is replaced.'
+              : 'Upload a photo and we forge a pixel fighter of YOU — full body, your gi, all four directions.'}
           </div>
 
-          {/* Photo upload */}
           <input
             ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="user"
+            type="file" accept="image/*" capture="user"
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) handlePhotoUpload(file);
+              if (file) handlePhoto(file);
             }}
           />
           <button
@@ -182,113 +75,39 @@ export default function SpriteCreatorScreen() {
               width: '100%', maxWidth: 280,
             }}
           >
-            UPLOAD PHOTO
+            📷 TAKE / UPLOAD PHOTO
           </button>
-
-          {/* Or generate from belt level */}
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#555', marginTop: 8 }}>— or —</div>
-          <button
-            onClick={handleGenerateFromDescription}
-            style={{
-              padding: '12px 24px', background: '#1a1a2e',
-              color: '#ffd700', fontSize: 'var(--fs-sm)', border: '2px solid #ffd700',
-              width: '100%', maxWidth: 280,
-            }}
-          >
-            GENERATE {player.belt.toUpperCase()} BELT SPRITE
-          </button>
-
-          <button
-            onClick={() => navigate('/overworld')}
-            style={{
-              padding: '8px 20px', background: '#111', color: '#666',
-              fontSize: 'var(--fs-xs)', border: '1px solid #333',
-            }}
-          >
-            BACK
-          </button>
+          {error && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: '#ef4444', textAlign: 'center', maxWidth: 280 }}>{error}</div>
+          )}
         </>
       )}
 
-      {/* Generating */}
-      {phase === 'generating' && (
+      {phase === 'working' && (
+        <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }} className="blink">READING PHOTO...</div>
+      )}
+
+      {phase === 'started' && (
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700', marginBottom: 16 }} className="blink">
-            GENERATING SPRITE...
+          <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700', marginBottom: 12 }} className="blink">
+            ⚒ FORGING YOUR FIGHTER
           </div>
-          <div style={{ fontSize: 'var(--fs-xs)', color: '#888' }}>
-            AI is creating your pixel art fighter.<br/>
-            This may take 30-90 seconds.
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#888', lineHeight: 1.9 }}>
+            Takes a couple of minutes. Keep training —<br />
+            we'll reveal it on the mats when it's ready.
           </div>
-          {preview && (
-            <img src={preview} alt="Your photo" style={{
-              width: 64, height: 64, borderRadius: 8, marginTop: 16,
-              objectFit: 'cover', border: '2px solid #333',
-            }} />
-          )}
         </div>
       )}
 
-      {/* Preview */}
-      {phase === 'preview' && spriteData && (
-        <>
-          <div style={{ fontSize: 'var(--fs-sm)', color: '#22c55e', marginBottom: 8 }}>
-            YOUR CUSTOM SPRITE
-          </div>
-
-          {/* Sprite display — scaled up for visibility */}
-          <div style={{
-            width: 128, height: 128, border: '3px solid #ffd700',
-            background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            imageRendering: 'pixelated',
-          }}>
-            <img
-              src={`data:image/png;base64,${spriteData}`}
-              alt="Your sprite"
-              style={{ width: 128, height: 128, imageRendering: 'pixelated' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 16, width: '100%', maxWidth: 280, flexDirection: 'column' }}>
-            <button
-              onClick={handleSaveSprite}
-              style={{
-                padding: '14px', background: '#1a2a1a',
-                color: '#22c55e', fontSize: 'var(--fs-md)', border: '2px solid #22c55e',
-              }}
-            >
-              USE THIS SPRITE
-            </button>
-            <button
-              onClick={() => setPhase('upload')}
-              style={{
-                padding: '10px', background: '#1a1a2e',
-                color: '#888', fontSize: 'var(--fs-xs)', border: '1px solid #444',
-              }}
-            >
-              TRY AGAIN
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Error */}
-      {phase === 'error' && (
-        <>
-          <div style={{ fontSize: 'var(--fs-sm)', color: '#ef4444', textAlign: 'center' }}>
-            {error || 'Something went wrong'}
-          </div>
-          <button
-            onClick={() => setPhase('upload')}
-            style={{
-              padding: '12px 24px', background: '#1a1a2e',
-              color: '#888', fontSize: 'var(--fs-sm)', border: '1px solid #444',
-            }}
-          >
-            TRY AGAIN
-          </button>
-        </>
-      )}
+      <button
+        onClick={() => navigate('/overworld')}
+        style={{
+          padding: '10px 24px', background: '#111', color: '#888',
+          fontSize: 'var(--fs-sm)', border: '1px solid #444',
+        }}
+      >
+        {phase === 'started' ? 'BACK TO TRAINING' : 'BACK'}
+      </button>
     </div>
   );
 }

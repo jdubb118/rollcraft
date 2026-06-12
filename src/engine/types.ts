@@ -98,7 +98,8 @@ export interface Grappler {
   learnedMoves: string[];  // all moves ever learned (full pool)
   moveXp: Record<string, number>; // move ID → XP earned from using it
   frame: Frame;
-  customSprite?: string;   // base64 PNG from PixelLab AI
+  customSprite?: string;   // base64 PNG from PixelLab AI (south frame — kept for back-compat)
+  customSprites?: { south: string; north: string; east: string; west: string }; // full directional character
   giColor?: string;
   gymName?: string;
   coachName?: string;

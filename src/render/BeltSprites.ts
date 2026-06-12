@@ -56,9 +56,17 @@ export function getBeltSprite(belt: Belt): HTMLImageElement | null {
 
 /**
  * Get a custom sprite from base64 data (stored on player).
+ * Cache key hashes the FULL string — same-size PNGs share their first ~50
+ * base64 chars, so a prefix key made every direction render the same frame.
  */
+function hashKey(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return `${h.toString(36)}:${s.length}`;
+}
+
 export function getCustomSprite(base64: string): HTMLImageElement | null {
-  const key = `custom:${base64.substring(0, 32)}`;
+  const key = `custom:${hashKey(base64)}`;
   if (spriteCache[key]) return spriteCache[key];
 
   const img = new Image();

@@ -17,7 +17,7 @@ const BELT_TRIM: Record<Belt, string> = {
 };
 
 export interface ShareCardOptions {
-  kind: 'promotion' | 'victory' | 'champion';
+  kind: 'promotion' | 'victory' | 'champion' | 'debut';
   player: Grappler;
   record: { wins: number; losses: number };
   // victory extras
@@ -106,11 +106,14 @@ export async function renderShareCard(opts: ShareCardOptions): Promise<HTMLCanva
   // ── Headline by kind ──
   const headline =
     opts.kind === 'promotion' ? `${opts.player.belt.toUpperCase()} BELT` :
-    opts.kind === 'champion' ? 'WORLD CHAMPION' : 'VICTORY';
-  const headColor = opts.kind === 'victory' ? '#22c55e' : opts.kind === 'champion' ? '#ffd700' : beltColor;
-  px(ctx, headline, SIZE / 2, 250, 56, headColor);
+    opts.kind === 'champion' ? 'WORLD CHAMPION' :
+    opts.kind === 'debut' ? 'FIGHTER FORGED' : 'VICTORY';
+  const headColor = opts.kind === 'victory' ? '#22c55e' : opts.kind === 'champion' || opts.kind === 'debut' ? '#ffd700' : beltColor;
+  px(ctx, headline, SIZE / 2, 250, opts.kind === 'debut' ? 48 : 56, headColor);
   if (opts.kind === 'promotion') {
     px(ctx, 'PROMOTED', SIZE / 2, 200, 20, '#aaa');
+  } else if (opts.kind === 'debut') {
+    px(ctx, 'A NEW CHALLENGER ENTERS', SIZE / 2, 305, 16, '#aaa');
   } else if (opts.kind === 'victory' && opts.opponentName) {
     px(ctx, `def. ${opts.opponentName.toUpperCase()}${opts.method ? ` BY ${opts.method.toUpperCase()}` : ''}`, SIZE / 2, 305, 18, '#aaa');
   }
@@ -192,7 +195,9 @@ export async function shareCard(opts: ShareCardOptions): Promise<'shared' | 'dow
       ? `Just got promoted to ${opts.player.belt} belt in Grapple Quest 🥋 grapplequest.com`
       : opts.kind === 'champion'
         ? `WORLD CHAMPION in Grapple Quest 🥋🏆 grapplequest.com`
-        : `Got the W in Grapple Quest 🥋 grapplequest.com`;
+        : opts.kind === 'debut'
+          ? `They turned me into a game character 🥋 grapplequest.com`
+          : `Got the W in Grapple Quest 🥋 grapplequest.com`;
     const result = await shareCanvas(canvas, `grapple-quest-${opts.kind}.png`, shareText);
     if (result !== 'failed') track('share-clicked', `${opts.kind}-${result === 'shared' ? 'native' : 'download'}`);
     return result;

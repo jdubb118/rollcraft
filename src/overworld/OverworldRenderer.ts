@@ -3,7 +3,7 @@ import { TILE_SIZE, TILE_COLORS, Tile } from './tiles';
 import { getGrapplerSprite, getPlayerSprite } from '../render/SpriteData';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../engine/constants';
 import type { Belt } from '../engine/types';
-import { getBeltSpriteDir } from '../render/BeltSprites';
+import { getBeltSpriteDir, getCustomSprite } from '../render/BeltSprites';
 import { getRegionAtmosphere } from '../data/world';
 import { getNPCSprite } from '../render/NPCSprites';
 import { getTileTexture } from '../render/Tileset';
@@ -208,6 +208,7 @@ export function renderOverworld(
   coachName?: string,
   regionId?: string,
   trophies?: { golds: number; stampColors: string[] },
+  playerCustomSprites?: { south: string; north: string; east: string; west: string },
 ) {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -366,8 +367,16 @@ export function renderOverworld(
   const py = p.isMoving ? lerpPos(p.row, p.targetRow, p.moveProgress) * TILE_SIZE : p.row * TILE_SIZE;
   const playerBob = p.isMoving ? walkBob(p.moveProgress) : idleBreath(0);
 
-  const aiSprite = getBeltSpriteDir(playerBelt, p.dir);
-  if (aiSprite) {
+  // Forged character (photo → directional sprites) outranks belt sprites
+  const dirMap: Record<string, 'south' | 'north' | 'west' | 'east'> = {
+    down: 'south', up: 'north', left: 'west', right: 'east',
+  };
+  const customDir = playerCustomSprites?.[dirMap[p.dir] || 'south'];
+  const customImg = customDir ? getCustomSprite(customDir) : null;
+  if (customImg) {
+    sprites.push({ x: px - 2, y: py - 6 + playerBob, canvas: customImg as any, row: p.row, w: 20, h: 20 });
+  } else if (getBeltSpriteDir(playerBelt, p.dir)) {
+    const aiSprite = getBeltSpriteDir(playerBelt, p.dir)!;
     sprites.push({ x: px - 2, y: py - 6 + playerBob, canvas: aiSprite as any, row: p.row, w: 20, h: 20 });
   } else {
     const playerSprite = playerGiColor

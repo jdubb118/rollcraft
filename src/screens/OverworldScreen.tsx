@@ -23,6 +23,8 @@ import { getRegionAtmosphere, getNextObjective, REGIONS } from '../data/world';
 import { getPendingChallenge, clearPendingChallenge } from '../engine/challenge';
 import { getDailyRollState, buildDailyOpponent, markDailyAttempted, getCoachGift, claimCoachGift, getFreshLegsRemaining } from '../engine/daily';
 import { addMoney } from '../state/saveLoad';
+import { getPendingCharacterJob, pollCharacterForge, equipCharacter, type CharacterRotations } from '../engine/characters';
+import { shareCard } from '../engine/shareCard';
 import { playRegionBGM } from '../engine/audio';
 import { preloadNPC } from '../render/NPCSprites';
 import { getRegionBG } from '../render/RegionBGs';
@@ -69,7 +71,25 @@ export default function OverworldScreen() {
   const wasMovingRef = useRef(false);
   const [arrivalText, setArrivalText] = useState<string[] | null>(null);
   const [, setGiftTick] = useState(0); // re-render after claiming the coach gift
+  const [revealRotations, setRevealRotations] = useState<CharacterRotations | null>(null);
+  const [revealShared, setRevealShared] = useState(false);
   const navigate = useNavigate();
+
+  // ── Character forge polling — the reveal fires here when the forge is done ──
+  useEffect(() => {
+    if (!getPendingCharacterJob()) return;
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      try {
+        const rotations = await pollCharacterForge();
+        if (rotations && !stopped) { setRevealRotations(rotations); return; }
+      } catch { /* failed — job cleared, silently fall back to classic sprites */ }
+      if (!stopped && getPendingCharacterJob()) setTimeout(poll, 9000);
+    };
+    poll();
+    return () => { stopped = true; };
+  }, []);
   const particlesRef = useRef<ParticleSystem>(createParticleSystem(60));
   const ambientRef = useRef<AmbientState>(createAmbientState());
 
@@ -173,7 +193,7 @@ export default function OverworldScreen() {
 
       const ctx = canvasRef.current!.getContext('2d')!;
       ctx.imageSmoothingEnabled = false;
-      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName, regionIdRef.current, trophies);
+      renderOverworld(ctx, state, tileMap, player.giColor, player.belt, player.coachName, regionIdRef.current, trophies, player.customSprites);
 
       // Ambient particles on overlay canvas
       if (effectsCanvasRef.current) {
@@ -755,6 +775,74 @@ export default function OverworldScreen() {
           })}
           <div style={{ fontSize: 'var(--fs-xs)', color: '#444', marginTop: 16 }} className="blink">
             TAP TO CONTINUE
+          </div>
+        </div>
+      )}
+
+      {/* ═══ THE REVEAL — your forged fighter is ready ═══ */}
+      {revealRotations && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 70,
+          background: 'rgba(0,0,0,0.92)',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          alignItems: 'center', padding: 24, gap: 16,
+        }}>
+          <div style={{ fontSize: 'var(--fs-xl)', color: '#ffd700', textAlign: 'center' }} className="blink">
+            YOUR FIGHTER IS READY
+          </div>
+          <img
+            src={`data:image/png;base64,${revealRotations.south}`}
+            alt="your fighter"
+            style={{ width: 160, height: 160, imageRendering: 'pixelated' }}
+          />
+          <div style={{ display: 'flex', gap: 10 }}>
+            {(['south', 'east', 'north', 'west'] as const).map(dir => (
+              <img
+                key={dir}
+                src={`data:image/png;base64,${revealRotations[dir]}`}
+                alt={dir}
+                style={{ width: 48, height: 48, imageRendering: 'pixelated', border: '1px solid #333', background: '#0d0d1a' }}
+              />
+            ))}
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#888', textAlign: 'center', lineHeight: 1.8 }}>
+            Forged from your photo. This is you now —<br />on the mats, in the brackets, on the team photo.
+          </div>
+          <button
+            onClick={() => {
+              equipCharacter(revealRotations);
+              const fresh = loadPlayer();
+              if (fresh) setPlayer(fresh);
+              setRevealRotations(null);
+            }}
+            style={{
+              padding: '14px 36px', background: '#1a2a1a', color: '#22c55e',
+              fontSize: 'var(--fs-md)', border: '2px solid #22c55e',
+            }}
+          >
+            STEP ON THE MAT
+          </button>
+          <button
+            onClick={async () => {
+              if (revealShared) return;
+              equipCharacter(revealRotations);
+              const fresh = loadPlayer();
+              if (fresh) {
+                setPlayer(fresh);
+                const prog = loadProgression();
+                await shareCard({ kind: 'debut', player: fresh, record: { wins: prog.totalWins, losses: prog.totalLosses } });
+                setRevealShared(true);
+              }
+            }}
+            style={{
+              padding: '10px 24px', background: '#1a1a0e', color: '#ffd700',
+              fontSize: 'var(--fs-sm)', border: '2px solid #8b7500',
+            }}
+          >
+            {revealShared ? '✓ CARD READY' : '📸 SHARE YOUR FIGHTER'}
+          </button>
+          <div style={{ fontSize: 7, color: '#555', textAlign: 'center', lineHeight: 1.8 }}>
+            Don't lose this fighter — link an email in ⚙ SETTINGS to play on any device.
           </div>
         </div>
       )}

@@ -37,6 +37,9 @@ try {
   await shot('gi-pick');
   await clickText('White');
 
+  // BECOME THE FIGHTER (photo step) — take the skip path
+  await clickText('SKIP');
+
   // ── Cinematic: tap-to-advance should rip through instantly ──
   // (break on the choice card itself — the cinematic text includes the
   // lowercase "Who do you partner with?" line, so don't match on that)

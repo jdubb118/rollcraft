@@ -29,6 +29,9 @@ async function loadProfile(userId: string) {
   const sb = getSupabase();
   if (!sb) return;
   const { data } = await sb.from('profiles').select('slug, display_name').eq('id', userId).maybeSingle();
+  // Session may have changed while this fetch was in flight (anonymous boot →
+  // email upgrade) — never let a stale fetch overwrite the current user.
+  if (_state.user?.id !== userId) return;
   _state.slug = data?.slug ?? null;
   _state.displayName = data?.display_name ?? null;
   emit();
@@ -38,7 +41,16 @@ export async function initAuth(): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;
 
-  const { data: { session } } = await sb.auth.getSession();
+  let { data: { session } } = await sb.auth.getSession();
+
+  // Anonymous-first: every player gets a real account from second one, so
+  // cloud save works with zero UI. Upgrading to email later (updateUser)
+  // keeps the same user id — nothing is ever lost.
+  if (!session) {
+    const { data, error } = await sb.auth.signInAnonymously();
+    if (!error) session = data.session;
+  }
+
   _state.session = session;
   _state.user = session?.user ?? null;
   emit();
@@ -63,6 +75,22 @@ export async function sendMagicLink(email: string, displayName?: string): Promis
       data: displayName ? { display_name: displayName } : undefined,
     },
   });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export function isAnonymousUser(): boolean {
+  return !!_state.user && !_state.user.email;
+}
+
+/**
+ * Upgrade an anonymous account with an email — SAME user id, so the cloud
+ * save and gym membership carry over. Supabase emails a confirmation link.
+ */
+export async function upgradeEmail(email: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, error: 'Cloud sync not configured' };
+  const { error } = await sb.auth.updateUser({ email });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSettings, saveSettings } from '../engine/settings';
 import { refreshAudio } from '../engine/audio';
-import { subscribeAuth, sendMagicLink, signOut, deleteAccount, isSupabaseConfigured } from '../engine/auth';
+import { subscribeAuth, sendMagicLink, signOut, deleteAccount, isSupabaseConfigured, isAnonymousUser, upgradeEmail } from '../engine/auth';
 import type { AuthState } from '../engine/auth';
 
 export default function SettingsScreen() {
@@ -24,9 +24,11 @@ export default function SettingsScreen() {
   const onSendLink = async () => {
     if (!email.includes('@')) { setAuthMsg('Enter a valid email.'); return; }
     setSending(true); setAuthMsg(null);
-    const r = await sendMagicLink(email);
+    // Anonymous session → upgrade in place (same account, nothing lost).
+    // No session at all → classic magic-link sign-in.
+    const r = isAnonymousUser() ? await upgradeEmail(email) : await sendMagicLink(email);
     setSending(false);
-    setAuthMsg(r.ok ? 'Magic link sent. Check your email.' : `Error: ${r.error}`);
+    setAuthMsg(r.ok ? 'Check your email to confirm — your fighter will be saved to it.' : `Error: ${r.error}`);
   };
 
   const onSignOut = async () => { await signOut(); setAuthMsg('Signed out.'); };
@@ -115,6 +117,22 @@ export default function SettingsScreen() {
         <div style={label}>ACCOUNT</div>
         {!isSupabaseConfigured() ? (
           <div style={{ color: '#888', fontSize: 'var(--fs-xs)' }}>Cloud sync not configured.</div>
+        ) : auth.user && !auth.user.email ? (
+          <>
+            <div style={{ color: '#aaa', fontSize: 'var(--fs-xs)', marginBottom: 6, lineHeight: 1.7 }}>
+              Your progress saves to the cloud automatically.<br />
+              <span style={{ color: '#ffd700' }}>Link an email</span> to play this fighter on any device.
+            </div>
+            <input
+              type="email" placeholder="you@example.com" value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ padding: '8px 10px', background: '#0a0a14', color: '#fff', border: '1px solid #444', fontSize: 'var(--fs-xs)', width: '100%' }}
+            />
+            <button
+              onClick={onSendLink} disabled={sending}
+              style={{ marginTop: 6, padding: '8px 12px', background: sending ? '#222' : '#1a2a1a', color: sending ? '#666' : '#22c55e', border: '1px solid #22c55e', fontSize: 'var(--fs-xs)', cursor: sending ? 'wait' : 'pointer' }}
+            >{sending ? 'SENDING…' : '► SAVE MY FIGHTER TO THIS EMAIL'}</button>
+          </>
         ) : auth.user ? (
           <>
             <div style={{ color: '#22c55e', fontSize: 'var(--fs-xs)' }}>
@@ -152,7 +170,7 @@ export default function SettingsScreen() {
       </div>
 
       <div style={{ marginTop: 20, color: '#666', fontSize: 'var(--fs-xs)', lineHeight: 1.6 }}>
-        Regional music is wired but tracks aren't shipped yet — drop OGG files at <code>public/audio/bgm/[region].ogg</code> to hear them.
+        Each region has its own soundtrack — adjust MUSIC VOLUME to taste.
       </div>
     </div>
   );

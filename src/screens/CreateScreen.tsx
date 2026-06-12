@@ -9,14 +9,17 @@ import { ARCHETYPES } from '../data/archetypes';
 import { RIVAL_NAME, RIVAL_STYLE_MAP } from '../data/storyArc';
 import { track } from '../engine/analytics';
 import { getPendingGym, fetchGym, joinGym } from '../engine/gyms';
+import { fileToSquarePng, startCharacterForge } from '../engine/characters';
+import { useRef } from 'react';
 
 function makeId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-// One smooth cinematic: setup → gym → style → train → rival → go
+// One smooth cinematic: setup → become the fighter → gym → style → train → rival → go
 type Phase =
   | 'name' | 'gym' | 'gi'             // setup
+  | 'photo'                             // BECOME THE FIGHTER — selfie → character forge (background)
   | 'cinematic'                         // walking into the gym + coach greeting
   | 'choice'                            // pick your training group
   | 'training'                          // instructor teaches you
@@ -63,6 +66,9 @@ export default function CreateScreen() {
   const [giColor, setGiColor] = useState<GiColor>('white');
   const [selectedPath, setSelectedPath] = useState<number | null>(null);
   const [textLine, setTextLine] = useState(0);
+  const [forgeState, setForgeState] = useState<'idle' | 'uploading' | 'forging' | 'error'>('idle');
+  const [forgeError, setForgeError] = useState('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const coach = coachName.trim() || 'Coach';
@@ -270,7 +276,7 @@ export default function CreateScreen() {
             {(Object.keys(GI_COLORS) as GiColor[]).map(color => {
               const gc = GI_COLORS[color];
               return (
-                <button key={color} onClick={() => { setGiColor(color); setTextLine(0); setPhase('cinematic'); }}
+                <button key={color} onClick={() => { setGiColor(color); setPhase('photo'); }}
                   style={{ width: 80, height: 100, display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', gap: 8,
                     background: '#111', border: '2px solid #444' }}>
@@ -283,6 +289,80 @@ export default function CreateScreen() {
               );
             })}
           </div>
+        </>
+      )}
+
+      {/* ═══ BECOME THE FIGHTER — photo → character forge (runs in background) ═══ */}
+      {phase === 'photo' && (
+        <>
+          <div style={{ fontSize: 'var(--fs-lg)', color: '#ffd700', textAlign: 'center', lineHeight: 1.8 }}>
+            BECOME THE FIGHTER
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: '#aaa', textAlign: 'center', lineHeight: 1.9, maxWidth: 300 }}>
+            Take a photo and we'll forge a pixel fighter of YOU —
+            in your {GI_COLORS[giColor].label.toLowerCase()} gi, ready to walk the mats.
+          </div>
+
+          <input
+            ref={photoInputRef}
+            type="file" accept="image/*" capture="user"
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setForgeState('uploading');
+              setForgeError('');
+              try {
+                const b64 = await fileToSquarePng(file, 512);
+                const r = await startCharacterForge(b64, GI_COLORS[giColor].primary);
+                if (!r.ok) { setForgeError(r.error); setForgeState('error'); return; }
+                setForgeState('forging');
+                // Forge runs in the background — straight into the story.
+                setTimeout(() => { setTextLine(0); setPhase('cinematic'); }, 1600);
+              } catch {
+                setForgeError('Could not read that photo. Try another.');
+                setForgeState('error');
+              }
+            }}
+          />
+
+          {forgeState === 'idle' || forgeState === 'error' ? (
+            <>
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                style={{
+                  padding: '16px 32px', background: '#1a2a1a', color: '#22c55e',
+                  fontSize: 'var(--fs-md)', border: '2px solid #22c55e', minWidth: 240,
+                }}
+              >
+                📷 TAKE / UPLOAD PHOTO
+              </button>
+              {forgeError && (
+                <div style={{ fontSize: 'var(--fs-xs)', color: '#ef4444', textAlign: 'center', maxWidth: 280 }}>
+                  {forgeError}
+                </div>
+              )}
+              <button
+                onClick={() => { setTextLine(0); setPhase('cinematic'); }}
+                style={{
+                  padding: '8px 20px', background: '#111', color: '#666',
+                  fontSize: 'var(--fs-xs)', border: '1px solid #333',
+                }}
+              >
+                SKIP — USE A CLASSIC FIGHTER
+              </button>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 'var(--fs-md)', color: '#ffd700' }} className="blink">
+                {forgeState === 'uploading' ? 'READING PHOTO...' : '⚒ FORGING YOUR FIGHTER'}
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: '#888', marginTop: 10, lineHeight: 1.8 }}>
+                This takes a couple of minutes.<br />
+                Your training starts now — we'll reveal your fighter when it's ready.
+              </div>
+            </div>
+          )}
         </>
       )}
 
