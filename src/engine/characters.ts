@@ -9,6 +9,85 @@ import { track } from './analytics';
 
 const JOB_KEY = 'rollcraft-char-job';
 
+// ── Rotation trimming ──
+// PixelLab returns each rotation on a padded canvas (e.g. 60×60 with a ~28px
+// character floating in transparency). Untrimmed, the overworld's 20px player
+// box renders you as a speck. Trim all four frames to a SHARED square around
+// the character (consistent size across directions), feet bottom-anchored.
+
+function loadDataImg(b64: string): Promise<HTMLImageElement | null> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = `data:image/png;base64,${b64}`;
+  });
+}
+
+function alphaBBox(img: HTMLImageElement): { x: number; y: number; w: number; h: number } | null {
+  const c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
+  const { data } = ctx.getImageData(0, 0, c.width, c.height);
+  let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      if (data[(y * c.width + x) * 4 + 3] > 16) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null;
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+export async function trimRotations(rot: CharacterRotations): Promise<CharacterRotations> {
+  const dirs = ['south', 'north', 'east', 'west'] as const;
+  const imgs = await Promise.all(dirs.map(d => loadDataImg(rot[d])));
+  const boxes = imgs.map(img => (img ? alphaBBox(img) : null));
+  if (imgs.some(i => !i) || boxes.some(b => !b)) return rot; // can't trim — ship as-is
+
+  const side = Math.max(...boxes.map(b => Math.max(b!.w, b!.h))) + 2;
+  const out = {} as CharacterRotations;
+  for (let i = 0; i < dirs.length; i++) {
+    const img = imgs[i]!;
+    const b = boxes[i]!;
+    const c = document.createElement('canvas');
+    c.width = side; c.height = side;
+    const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingEnabled = false;
+    // center horizontally on the character, feet anchored to the bottom edge
+    const dx = Math.round(side / 2 - (b.x + b.w / 2));
+    const dy = side - 1 - (b.y + b.h - 1);
+    ctx.drawImage(img, dx, dy);
+    out[dirs[i]] = c.toDataURL('image/png').split(',')[1];
+  }
+  return out;
+}
+
+/** One-time migration: players who forged before trimming shipped get their
+ * saved rotations trimmed in place (fixes the "tiny blip" overworld render). */
+export async function migrateTrimSprites(): Promise<void> {
+  const player = loadPlayer();
+  if (!player?.customSprites || player.spritesTrimmed) return;
+  try {
+    const south = await loadDataImg(player.customSprites.south);
+    const box = south ? alphaBBox(south) : null;
+    // Only migrate if there's real padding to remove
+    if (south && box && (box.w < south.width * 0.8 || box.h < south.height * 0.8)) {
+      player.customSprites = await trimRotations(player.customSprites);
+      player.customSprite = player.customSprites.south;
+    }
+    player.spritesTrimmed = true;
+    savePlayer(player);
+    syncGymMember(player);
+  } catch { /* never block boot on this */ }
+}
+
 /** Center-crop (face-biased) + resize any image file to a square PNG base64. */
 export async function fileToSquarePng(file: File, size = 512): Promise<string> {
   const url = URL.createObjectURL(file);
@@ -85,10 +164,11 @@ export async function pollCharacterForge(): Promise<CharacterRotations | null> {
   const res = await fetch(`/api/create-character?job=${job.jobId}&character=${job.characterId}`);
   const data = await res.json();
   if (data.status === 'completed' && data.rotations) {
-    equipCharacter(data.rotations as CharacterRotations); // persist FIRST
+    const trimmed = await trimRotations(data.rotations as CharacterRotations);
+    equipCharacter(trimmed); // persist FIRST
     clearPendingCharacterJob();
     track('character-forge', 'completed');
-    return data.rotations as CharacterRotations;
+    return trimmed;
   }
   if (data.status === 'failed') {
     clearPendingCharacterJob();
@@ -104,6 +184,7 @@ export function equipCharacter(rotations: CharacterRotations): void {
   if (!player) return;
   player.customSprites = rotations;
   player.customSprite = rotations.south; // back-compat: cards/roster/battle use south
+  player.spritesTrimmed = true;
   savePlayer(player);
   syncGymMember(player);
 }

@@ -36,6 +36,9 @@ trackSession();
 captureChallengeFromUrl();
 captureGymFromUrl();
 
+// One-time fix-up: trim padded character rotations saved before trimming shipped
+import('./engine/characters').then(m => m.migrateTrimSprites());
+
 export default function App() {
   return (
     <Routes>

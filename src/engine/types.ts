@@ -100,6 +100,7 @@ export interface Grappler {
   frame: Frame;
   customSprite?: string;   // base64 PNG from PixelLab AI (south frame — kept for back-compat)
   customSprites?: { south: string; north: string; east: string; west: string }; // full directional character
+  spritesTrimmed?: boolean; // rotations normalized (padding cropped, feet anchored)
   giColor?: string;
   gymName?: string;
   coachName?: string;

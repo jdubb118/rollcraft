@@ -4,7 +4,7 @@
  * Exports via the native share sheet when available, download otherwise.
  */
 import type { Belt, Grappler } from './types';
-import { getBeltSprite, getCustomSprite } from '../render/BeltSprites';
+import { getBeltSprite } from '../render/BeltSprites';
 import { track } from './analytics';
 
 const SIZE = 1080;
@@ -40,19 +40,18 @@ function px(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, s
   ctx.fillText(text, x, y);
 }
 
-function loadSprite(player: Grappler): HTMLImageElement | null {
+// Load the player's sprite for the card. The custom sprite is loaded
+// DIRECTLY as a promise — the old cache-poll returned the (preloaded) belt
+// sprite instantly whenever the custom sprite wasn't warm yet, so cards
+// shared right after the reveal showed a generic fighter instead of YOU.
+async function waitForSprite(player: Grappler): Promise<HTMLImageElement | null> {
   if (player.customSprite) {
-    const img = getCustomSprite(player.customSprite);
+    const img = await loadImg(`data:image/png;base64,${player.customSprite}`);
     if (img) return img;
   }
-  return getBeltSprite(player.belt);
-}
-
-// Sprites load async through the render-loop caches; give them a beat.
-async function waitForSprite(player: Grappler, tries = 20): Promise<HTMLImageElement | null> {
-  for (let i = 0; i < tries; i++) {
-    const img = loadSprite(player);
-    if (img) return img;
+  for (let i = 0; i < 20; i++) {
+    const belt = getBeltSprite(player.belt);
+    if (belt) return belt;
     await new Promise(r => setTimeout(r, 150));
   }
   return null;
@@ -118,10 +117,10 @@ export async function renderShareCard(opts: ShareCardOptions): Promise<HTMLCanva
     px(ctx, `def. ${opts.opponentName.toUpperCase()}${opts.method ? ` BY ${opts.method.toUpperCase()}` : ''}`, SIZE / 2, 305, 18, '#aaa');
   }
 
-  // ── Sprite, point-upscaled huge ──
-  const spriteSize = 384;
+  // ── Sprite, point-upscaled huge (debut trades some size for the 4-dir strip) ──
+  const spriteSize = opts.kind === 'debut' ? 310 : 384;
   const sx = (SIZE - spriteSize) / 2;
-  const sy = 360;
+  const sy = opts.kind === 'debut' ? 345 : 360;
   // Glow pad behind the sprite
   const glow = ctx.createRadialGradient(SIZE / 2, sy + spriteSize / 2, 40, SIZE / 2, sy + spriteSize / 2, 280);
   glow.addColorStop(0, 'rgba(255,215,0,0.10)');
@@ -141,8 +140,28 @@ export async function renderShareCard(opts: ShareCardOptions): Promise<HTMLCanva
     ctx.fillRect(sx + 96, sy + 48, 192, 288);
   }
 
+  // ── Debut: show all four directions — the full character flex ──
+  if (opts.kind === 'debut' && opts.player.customSprites) {
+    const dirs = ['west', 'north', 'east'] as const; // south is the hero above
+    const mini = 104;
+    const stripY = 706;
+    const totalW = dirs.length * (mini + 34) - 34;
+    let mx = SIZE / 2 - totalW / 2;
+    for (const dir of dirs) {
+      const img = await loadImg(`data:image/png;base64,${opts.player.customSprites[dir]}`);
+      if (img) {
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(mx + mini / 2, stripY + mini - 2, mini / 3, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.drawImage(img, mx, stripY, mini, mini);
+      }
+      mx += mini + 34;
+    }
+  }
+
   // ── Belt band ──
-  const bandY = 800;
+  const bandY = opts.kind === 'debut' ? 826 : 800;
   ctx.fillStyle = beltColor;
   ctx.fillRect(SIZE / 2 - 260, bandY, 520, 26);
   ctx.fillStyle = BELT_TRIM[opts.player.belt];
