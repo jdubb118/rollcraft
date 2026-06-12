@@ -305,7 +305,9 @@ export default function CreateScreen() {
 
           <input
             ref={photoInputRef}
-            type="file" accept="image/*" capture="user"
+            type="file" accept="image/*"
+            // no `capture` attr — on iOS it forces the camera and hides the
+            // photo-library option; without it Safari shows the full sheet
             style={{ display: 'none' }}
             onChange={async (e) => {
               const file = e.target.files?.[0];

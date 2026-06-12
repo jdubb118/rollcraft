@@ -60,7 +60,8 @@ export default function SpriteCreatorScreen() {
 
           <input
             ref={fileRef}
-            type="file" accept="image/*" capture="user"
+            type="file" accept="image/*"
+            // no `capture` attr — iOS would force the camera and hide the gallery
             style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
